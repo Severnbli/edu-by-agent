@@ -21,7 +21,7 @@ All commands run from the repo root through Docker: `./edu ...`.
 
 The captcha means **you can't log in yourself**. Ask the user to run one of these:
 
-- `! ./edu session login` – opens a browser; they log in, then press Enter in the terminal.
+- `! ./edu session login` – opens a browser with site/login/password prefilled from `.env` (`EDU_SITE`, `EDU_USERNAME`, `EDU_PASSWORD`); they solve the captcha and click Авторизация, the window closes by itself. You may also start it yourself in the background and wait.
 - `! ./edu browse` – same browser; cookies are saved when they close it.
 - `! ./edu session import` – paste a `Cookie` header from DevTools.
 

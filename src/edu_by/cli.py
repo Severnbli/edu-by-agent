@@ -55,7 +55,7 @@ def _proxy_error(s: Settings, e: Exception) -> None:
 
 @session_app.command("login")
 def session_login(proxy: ProxyOpt = None) -> None:
-    """Open the login page in a desktop browser, log in by hand, save the session."""
+    """Log in via a desktop browser: form prefilled from .env, you solve the captcha."""
     from edu_by.browser import check_browser_proxy
 
     s = _settings(proxy)
@@ -64,7 +64,15 @@ def session_login(proxy: ProxyOpt = None) -> None:
     except ValueError as e:
         _fail(str(e))
     typer.echo(f"Proxy: {mask_proxy(s.effective_proxy)}  Login: {s.login_url}")
-    n = sess.login_via_browser(s)
+    prefilled = [k for k in ("site", "username", "password") if getattr(s, k)]
+    typer.echo(
+        f"Prefilled from .env: {', '.join(prefilled)}. " if prefilled else "Fill in the form, "
+    )
+    typer.echo("Solve the captcha and click Авторизация – the window closes by itself.")
+    try:
+        n = sess.login_via_browser(s)
+    except sess.SessionError as e:
+        _fail(str(e))
     typer.echo(f"Saved {n} cookie(s) to {s.cookies_file}")
     _report_check(s)
 
@@ -233,7 +241,13 @@ def browse(
     proxy: ProxyOpt = None,
 ) -> None:
     """Open any *.edu.by site in a desktop browser through the configured proxy."""
-    from edu_by.browser import check_browser_proxy, is_edu_by, open_browser, run_until_closed
+    from edu_by.browser import (
+        attach_login_prefill,
+        check_browser_proxy,
+        is_edu_by,
+        open_browser,
+        run_until_closed,
+    )
 
     s = _settings(proxy)
     url = url or s.login_url
@@ -256,6 +270,7 @@ def browse(
     with open_browser(s) as context:
         if recorder:
             recorder.attach(context)
+        attach_login_prefill(context, s)
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(url)
         cookies = run_until_closed(context, on_cookies=on_cookies)

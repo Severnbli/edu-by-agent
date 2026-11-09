@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,12 @@ class Settings(BaseSettings):
 
     login_url: str = "https://wp.brest-region.edu.by/"
     constructor_url: str = "https://wp.brest-region.edu.by/explorer.aspx"
+
+    # Login form prefill: the user then only solves the captcha.
+    site: str | None = None  # e.g. sch12.baranovichi.edu.by
+    username: str | None = None
+    password: SecretStr | None = None
+    security: str | None = None  # ListSecurity: Hight | Medium | Low | Zero (site default: Hight)
 
     proxy: str | None = None
     # Direct mode: reach the site over this interface (e.g. wlo1), bypassing a VPN route.
