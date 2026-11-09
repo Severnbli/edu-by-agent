@@ -20,8 +20,10 @@ session_app = typer.Typer(
     help="Obtain, check and keep alive the constructor session.", no_args_is_help=True
 )
 proxy_app = typer.Typer(help="Proxy and Shadowsocks utilities.", no_args_is_help=True)
+har_app = typer.Typer(help="Sanitize and summarize HAR captures.", no_args_is_help=True)
 app.add_typer(session_app, name="session")
 app.add_typer(proxy_app, name="proxy")
+app.add_typer(har_app, name="har")
 
 ProxyOpt = Annotated[
     str | None,
@@ -221,6 +223,13 @@ def browse(
     save_session: Annotated[
         bool, typer.Option(help="Save site cookies to the session when the browser closes.")
     ] = True,
+    har: Annotated[
+        str | None,
+        typer.Option(
+            help="Record edu.by traffic to .session/har/<NAME>.har; a sanitized "
+            "<NAME>.sanitized.har is written when the browser closes."
+        ),
+    ] = None,
     proxy: ProxyOpt = None,
 ) -> None:
     """Open any *.edu.by site in a desktop browser through the configured proxy."""
@@ -237,13 +246,50 @@ def browse(
         check_browser_proxy(s)
     except ValueError as e:
         _fail(str(e))
-    with open_browser(s) as context:
+    raw_har = s.session_dir / "har" / f"{har}.har" if har else None
+    if raw_har:
+        typer.echo(f"Recording edu.by traffic to {raw_har}")
+    with open_browser(s, har_path=raw_har) as context:
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(url)
         cookies = run_until_closed(context)
     if save_session and cookies:
         n = sess.save_cookies(s, cookies)
         typer.echo(f"Saved {n} site cookie(s) to {s.cookies_file}")
+    if raw_har and raw_har.exists():
+        from edu_by import har as har_mod
+
+        raw_har.chmod(0o600)
+        clean = raw_har.with_suffix(".sanitized.har")
+        n = har_mod.sanitize(raw_har, clean)
+        typer.echo(f"HAR: {n} request(s). Sanitized copy: {clean}")
+
+
+# ---------- har ----------
+
+
+@har_app.command("sanitize")
+def har_sanitize(src: Path, dst: Annotated[Path | None, typer.Argument()] = None) -> None:
+    """Strip cookies, passwords, captcha, tokens and ViewState from a HAR."""
+    from edu_by import har as har_mod
+
+    dst = dst or src.with_suffix(".sanitized.har")
+    n = har_mod.sanitize(src, dst)
+    typer.echo(f"{n} request(s) -> {dst}")
+
+
+@har_app.command("summary")
+def har_summary(
+    path: Path,
+    static: Annotated[bool, typer.Option(help="Include css/js/images/fonts.")] = False,
+) -> None:
+    """List distinct request shapes in a (sanitized) HAR."""
+    from edu_by import har as har_mod
+
+    if not path.name.endswith(".sanitized.har"):
+        _fail("Summarize the sanitized HAR (*.sanitized.har), not the raw one.")
+    for line in har_mod.summarize(path, include_static=static):
+        typer.echo(line)
 
 
 if __name__ == "__main__":

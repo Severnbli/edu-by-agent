@@ -275,3 +275,52 @@ def test_direct_proxy_refuses_non_edu_by():
 )
 def test_direct_proxy_allowlist(host, ok):
     assert direct_proxy.is_allowed_host(host) is ok
+
+
+# ---------- har ----------
+
+
+def test_har_sanitize_removes_secrets(tmp_path):
+    from edu_by import har
+
+    raw = {
+        "log": {
+            "entries": [
+                {
+                    "request": {
+                        "method": "POST",
+                        "url": "https://wp.brest-region.edu.by/login.aspx?ReturnUrl=x&token=SECRET1",
+                        "headers": [{"name": "Cookie", "value": "ASP.NET_SessionId=SECRET2"}],
+                        "cookies": [{"name": "ASP.NET_SessionId", "value": "SECRET2"}],
+                        "queryString": [{"name": "token", "value": "SECRET1"}],
+                        "postData": {
+                            "mimeType": "application/x-www-form-urlencoded",
+                            "text": "login=teacher&password=SECRET3&captcha=SECRET4&__VIEWSTATE=SECRET5",
+                            "params": [{"name": "password", "value": "SECRET3"}],
+                        },
+                    },
+                    "response": {
+                        "status": 302,
+                        "headers": [{"name": "Set-Cookie", "value": ".ASPXAUTH=SECRET6"}],
+                        "cookies": [{"name": ".ASPXAUTH", "value": "SECRET6"}],
+                        "content": {
+                            "mimeType": "text/html",
+                            "text": '<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="SECRET7" />'
+                            "|20|hiddenField|__EVENTVALIDATION|SECRET8|",
+                        },
+                    },
+                }
+            ]
+        }
+    }
+    src = tmp_path / "x.har"
+    src.write_text(json.dumps(raw))
+    dst = tmp_path / "x.sanitized.har"
+    assert har.sanitize(src, dst) == 1
+    out = dst.read_text()
+    for i in range(1, 9):
+        assert f"SECRET{i}" not in out, i
+    assert "login=teacher" in out and "ReturnUrl=x" in out
+    assert oct(dst.stat().st_mode & 0o777) == "0o600"
+    lines = har.summarize(dst)
+    assert len(lines) == 1 and "fields=login,password,captcha,__VIEWSTATE" in lines[0]
