@@ -81,7 +81,7 @@ edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client *
 
 ## Git
 
-- Work on the `dev` branch (or feature branches off it); `main` only receives merges from `dev`.
+- All work is committed directly on the `dev` branch – no feature branches. `main` is updated only through a pull request from `dev` to `main`.
 - Commit after each logical step – don't batch unrelated changes or leave work uncommitted at the end of a task.
 - Before committing, check the diff for secrets (cookies, `ss://` links, passwords, raw HAR files).
 
