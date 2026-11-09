@@ -146,12 +146,70 @@ def test_shadowsocks_config_drops_own_local(tmp_path, monkeypatch):
     assert oct(Path(cmd[2]).stat().st_mode & 0o777) == "0o600"
 
 
-def test_effective_proxy_uses_ss_host(tmp_path):
-    s = make(tmp_path, ss_url="ss://x", ss_host="ss")
-    assert s.effective_proxy == "socks5h://ss:1080"
+def test_effective_proxy_direct_mode_beats_shadowsocks(tmp_path):
+    s = make(tmp_path, interface="wlo1", ss_url="ss://x")
+    assert s.effective_proxy == "http://127.0.0.1:1081"
 
 
 def test_shadowsocks_missing_binary(tmp_path, monkeypatch):
     monkeypatch.setattr(shadowsocks.shutil, "which", lambda b: None)
     with pytest.raises(shadowsocks.ShadowsocksError):
         shadowsocks.build_command(make(tmp_path, ss_url="ss://x"))
+
+
+# ---------- direct proxy ----------
+
+import asyncio  # noqa: E402
+
+from edu_by import direct_proxy  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("h:443", ("h", 443)), ("h", ("h", 443)), ("[::1]:8443", ("::1", 8443))],
+)
+def test_split_hostport(value, expected):
+    assert direct_proxy._split_hostport(value, 443) == expected
+
+
+def test_direct_proxy_connect_and_plain_http():
+    async def scenario():
+        async def upstream(r, w):
+            data = await r.read(4096)
+            w.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok|" + data)
+            await w.drain()
+            w.close()
+
+        up = await asyncio.start_server(upstream, "127.0.0.1", 0)
+        up_port = up.sockets[0].getsockname()[1]
+        proxy = await direct_proxy.serve("127.0.0.1", 0, "lo")
+        p_port = proxy.sockets[0].getsockname()[1]
+
+        # CONNECT tunnel
+        r, w = await asyncio.open_connection("127.0.0.1", p_port)
+        w.write(f"CONNECT 127.0.0.1:{up_port} HTTP/1.1\r\n\r\n".encode())
+        assert b"200" in await r.readuntil(b"\r\n\r\n")
+        w.write(b"hello")
+        assert b"hello" in await r.read(4096)
+        w.close()
+
+        # absolute-URI plain HTTP is rewritten to origin-form
+        r, w = await asyncio.open_connection("127.0.0.1", p_port)
+        w.write(
+            f"GET http://127.0.0.1:{up_port}/a?b=1 HTTP/1.1\r\nHost: x\r\nProxy-Connection: keep-alive\r\n\r\n".encode()
+        )
+        body = await r.read(4096)
+        assert b"GET /a?b=1 HTTP/1.1" in body
+        assert b"Proxy-Connection" not in body and b"Connection: close" in body
+        w.close()
+
+        # unreachable target -> 502
+        r, w = await asyncio.open_connection("127.0.0.1", p_port)
+        w.write(b"CONNECT 127.0.0.1:1 HTTP/1.1\r\n\r\n")
+        assert b"502" in await r.read(4096)
+        w.close()
+
+        proxy.close()
+        up.close()
+
+    asyncio.run(scenario())
