@@ -28,7 +28,6 @@ class Settings(BaseSettings):
 
     session_dir: Path = Path(".session")
     keepalive_minutes: float = 45
-    ip_check_url: str = "https://api.ipify.org?format=json"
     timeout: float = 30
 
     @property

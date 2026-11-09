@@ -10,7 +10,7 @@ All commands run from the repo root through Docker: `./edu ...`.
 ## 1. Make sure the proxy works
 
 - Direct mode (`EDU_INTERFACE`) or Shadowsocks (`EDU_SS_URL` / `EDU_SS_CONFIG`): the `direct` or `ss` container must be running – `./edu proxy up` starts the right one (detached), `docker compose ps` shows it.
-- Then run `./edu proxy check`. Expect an exit IP and HTTP 200 for the login and constructor URLs.
+- Then run `./edu proxy check`. Expect HTTP 200 for the login and constructor URLs.
 - On connection errors, report the error to the user. Never fall back to a direct connection.
 
 ## 2. Check the session
@@ -34,4 +34,4 @@ The session dies after ~1 h idle. For long interactive work, suggest the user ke
 ## Rules
 
 - Never print cookie values or `ss://` links. `edu session check` already masks them.
-- Opening another `*.edu.by` site for the user: `./edu browse <url>`. Non-edu.by sites go direct unless `--all` is passed.
+- Opening another `*.edu.by` site for the user: `./edu browse <url>`. Non-edu.by sites always go direct.

@@ -182,7 +182,7 @@ def test_direct_proxy_connect_and_plain_http():
 
         up = await asyncio.start_server(upstream, "127.0.0.1", 0)
         up_port = up.sockets[0].getsockname()[1]
-        proxy = await direct_proxy.serve("127.0.0.1", 0, "lo")
+        proxy = await direct_proxy.serve("127.0.0.1", 0, "lo", allowed=lambda h: True)
         p_port = proxy.sockets[0].getsockname()[1]
 
         # CONNECT tunnel
@@ -213,3 +213,65 @@ def test_direct_proxy_connect_and_plain_http():
         up.close()
 
     asyncio.run(scenario())
+
+
+def test_http_client_proxies_only_edu_by(tmp_path):
+    from edu_by.http import make_client
+
+    s = make(tmp_path, interface="wlo1")
+    with make_client(s) as c:
+        proxied = {
+            u: c._transport_for_url(httpx.URL(u)) is not c._transport
+            for u in (
+                "https://wp.brest-region.edu.by/",
+                "https://edu.by/",
+                "https://api.anthropic.com/",
+                "https://notedu.by/",
+                "https://github.com/",
+            )
+        }
+    assert proxied == {
+        "https://wp.brest-region.edu.by/": True,
+        "https://edu.by/": True,
+        "https://api.anthropic.com/": False,
+        "https://notedu.by/": False,
+        "https://github.com/": False,
+    }
+
+
+def test_browser_refuses_credentialed_proxy(tmp_path):
+    from edu_by.browser import open_browser
+
+    s = make(tmp_path, proxy="http://u:p@h:3128")
+    with pytest.raises(ValueError), open_browser(s):
+        pass
+
+
+def test_direct_proxy_refuses_non_edu_by():
+    async def scenario():
+        proxy = await direct_proxy.serve("127.0.0.1", 0, "lo")
+        port = proxy.sockets[0].getsockname()[1]
+        for req in (
+            b"CONNECT api.anthropic.com:443 HTTP/1.1\r\n\r\n",
+            b"GET http://github.com/ HTTP/1.1\r\nHost: github.com\r\n\r\n",
+        ):
+            r, w = await asyncio.open_connection("127.0.0.1", port)
+            w.write(req)
+            assert b"403" in await r.read(4096)
+            w.close()
+        proxy.close()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    ("host", "ok"),
+    [
+        ("wp.brest-region.edu.by", True),
+        ("EDU.BY.", True),
+        ("notedu.by", False),
+        ("edu.by.evil.com", False),
+    ],
+)
+def test_direct_proxy_allowlist(host, ok):
+    assert direct_proxy.is_allowed_host(host) is ok

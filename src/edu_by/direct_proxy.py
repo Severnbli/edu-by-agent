@@ -4,7 +4,8 @@ Lets containers and Chromium (which only understand proxies) reach the site over
 interface, e.g. the physical uplink, bypassing a VPN that owns the default route
 (wg-quick policy routing). Uses SO_BINDTODEVICE, which needs no root since Linux 5.7.
 
-Supports CONNECT (HTTPS) and absolute-URI requests (plain HTTP). Listens on localhost only.
+Supports CONNECT (HTTPS) and absolute-URI requests (plain HTTP). Listens on localhost only
+and, by default, forwards only edu.by / *.edu.by (everything else gets 403).
 """
 
 from __future__ import annotations
@@ -12,10 +13,18 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import socket
+from collections.abc import Callable
 from urllib.parse import urlsplit
+
+from edu_by.http import PROXIED_DOMAIN
 
 SO_BINDTODEVICE = getattr(socket, "SO_BINDTODEVICE", 25)
 MAX_HEADER = 64 * 1024
+
+
+def is_allowed_host(host: str) -> bool:
+    host = host.lower().rstrip(".")
+    return host == PROXIED_DOMAIN or host.endswith("." + PROXIED_DOMAIN)
 
 
 async def open_bound(host: str, port: int, interface: str | None, timeout: float = 15):
@@ -60,7 +69,9 @@ def _split_hostport(value: str, default_port: int) -> tuple[str, int]:
     return value, default_port
 
 
-async def handle(client_r, client_w, interface: str | None) -> None:
+async def handle(
+    client_r, client_w, interface: str | None, allowed: Callable[[str], bool] = is_allowed_host
+) -> None:
     try:
         head = await client_r.readuntil(b"\r\n\r\n")
     except (asyncio.IncompleteReadError, asyncio.LimitOverrunError, ConnectionError):
@@ -76,6 +87,8 @@ async def handle(client_r, client_w, interface: str | None) -> None:
     try:
         if method.upper() == "CONNECT":
             host, port = _split_hostport(target, 443)
+            if not allowed(host):
+                raise PermissionError(f"{host} is not an edu.by host")
             up_r, up_w = await open_bound(host, port, interface)
             client_w.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
             await client_w.drain()
@@ -83,6 +96,8 @@ async def handle(client_r, client_w, interface: str | None) -> None:
             url = urlsplit(target)
             if not url.hostname:
                 raise ValueError("absolute URL required")
+            if not allowed(url.hostname):
+                raise PermissionError(f"{url.hostname} is not an edu.by host")
             up_r, up_w = await open_bound(url.hostname, url.port or 80, interface)
             path = (url.path or "/") + (f"?{url.query}" if url.query else "")
             headers = [
@@ -97,8 +112,11 @@ async def handle(client_r, client_w, interface: str | None) -> None:
             await up_w.drain()
     except Exception as e:
         msg = f"proxy error: {e}".encode()
+        status = b"403 Forbidden" if isinstance(e, PermissionError) else b"502 Bad Gateway"
         client_w.write(
-            b"HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain\r\nConnection: close\r\n"
+            b"HTTP/1.1 "
+            + status
+            + b"\r\nContent-Type: text/plain\r\nConnection: close\r\n"
             + f"Content-Length: {len(msg)}\r\n\r\n".encode()
             + msg
         )
@@ -110,9 +128,14 @@ async def handle(client_r, client_w, interface: str | None) -> None:
     await asyncio.gather(_pipe(client_r, up_w), _pipe(up_r, client_w))
 
 
-async def serve(host: str, port: int, interface: str | None) -> asyncio.base_events.Server:
+async def serve(
+    host: str,
+    port: int,
+    interface: str | None,
+    allowed: Callable[[str], bool] = is_allowed_host,
+) -> asyncio.base_events.Server:
     return await asyncio.start_server(
-        lambda r, w: handle(r, w, interface), host, port, limit=MAX_HEADER
+        lambda r, w: handle(r, w, interface, allowed), host, port, limit=MAX_HEADER
     )
 
 
