@@ -40,7 +40,7 @@ def _fail(msg: str, code: int = 1) -> None:
 
 
 def _proxy_error(s: Settings, e: Exception) -> None:
-    hint = " Is `edu proxy up` running?" if s.shadowsocks_configured and not s.proxy else ""
+    hint = " Is the ss container running (`./edu proxy up`)?" if s.shadowsocks_configured and not s.proxy else ""
     _fail(f"Connection failed via {mask_proxy(s.effective_proxy)}: {e}.{hint}")
 
 
@@ -140,7 +140,7 @@ def proxy_up() -> None:
         cmd = shadowsocks.build_command(s)
     except shadowsocks.ShadowsocksError as e:
         _fail(str(e))
-    typer.echo(f"Starting {cmd[0]} on socks5h://127.0.0.1:{s.ss_local_port} (Ctrl+C to stop)")
+    typer.echo(f"Starting {cmd[0]} on {s.ss_bind}:{s.ss_local_port} (Ctrl+C to stop)")
     raise typer.Exit(shadowsocks.run(s))
 
 
@@ -170,16 +170,22 @@ def proxy_pac(
     ),
     proxy: ProxyOpt = None,
 ) -> None:
-    """Write a PAC file routing *.edu.by via the proxy, for your own desktop browser."""
+    """Write a PAC file routing *.edu.by via the proxy, for your own desktop browser.
+
+    With Shadowsocks it points at 127.0.0.1:<EDU_SS_LOCAL_PORT>, the port the ss
+    container publishes on the host.
+    """
     from edu_by.browser import pac_script
 
     s = _settings(proxy)
+    if not s.proxy and s.shadowsocks_configured:
+        s = s.model_copy(update={"ss_host": "127.0.0.1"})
     if not s.effective_proxy:
         _fail("No proxy configured (EDU_PROXY or EDU_SS_URL / EDU_SS_CONFIG).")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(pac_script(s.effective_proxy))
     typer.echo(f"Wrote {out.resolve()}")
-    typer.echo(f"Use it e.g.: chromium --proxy-pac-url=file://{out.resolve()}")
+    typer.echo(f"Use it in your browser's proxy settings: file://<repo>/{out}")
 
 
 # ---------- browse ----------

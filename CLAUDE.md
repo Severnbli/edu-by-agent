@@ -12,7 +12,9 @@ The repo has three layers, built in this order:
 
 ```
 CLAUDE.md
-pyproject.toml            # uv-managed, Python 3.11+
+pyproject.toml            # Python 3.10+ package
+Dockerfile, compose.yaml  # the only supported runtime
+edu                       # wrapper: ./edu <command>
 .env.example              # template; real .env is git-ignored
 src/edu_by/
   cli.py                  # `edu` entry point (typer)
@@ -33,25 +35,29 @@ Directories are created as the work reaches them – don't add empty scaffolding
 
 ## Commands
 
+Everything runs in **Docker** – no local venv or Python install. `./edu` wraps `docker compose` (image `edu-by:dev`, repo bind-mounted at `/app`, so code edits apply without a rebuild; rebuild only after dependency changes).
+
 ```bash
-uv sync                          # install (without uv: python3 -m venv .venv && .venv/bin/pip install -e . pytest ruff)
-uv run playwright install chromium   # once, for login/browse
-uv run edu --help
-uv run edu browse [URL]          # open any *.edu.by in desktop Chromium via the proxy (others go direct; --all proxies everything)
-uv run edu proxy pac             # write a PAC file routing *.edu.by via the proxy, for your own browser
-uv run edu session login         # open a browser, solve captcha, save the session
-uv run edu session import        # paste a cookie copied from DevTools instead
-uv run edu session check         # is the saved session still valid?
-uv run edu session keepalive     # ping in the background so the 1 h idle timeout never hits
-uv run edu proxy up              # run local sslocal for Shadowsocks (foreground)
-uv run edu proxy check           # show the exit IP and whether edu.by is reachable
-uv run pytest
-uv run ruff check . && uv run ruff format .
+./edu build                      # build the image (Playwright Chromium + sslocal + the package)
+./edu --help
+./edu proxy up                   # start the Shadowsocks container (ss, SOCKS5 on 127.0.0.1:1080 too)
+./edu proxy down | logs
+./edu proxy check                # exit IP and whether the login/constructor pages are reachable
+./edu proxy pac                  # PAC file routing *.edu.by via 127.0.0.1:1080, for your own browser
+./edu browse [URL]               # any *.edu.by in a desktop Chromium window via the proxy (--all proxies everything)
+./edu session login              # browser window: log in, solve captcha, press Enter -> session saved
+./edu session import             # paste a Cookie header copied from DevTools instead
+./edu session check              # exit 0 valid, 2 expired
+./edu session keepalive          # ping every 45 min so the 1 h idle timeout never hits
+./edu test                       # pytest
+./edu lint | fmt                 # ruff check / fix + format
 ```
+
+Desktop windows use the host X server (`/tmp/.X11-unix`, works with XWayland); `./edu` runs `xhost +SI:localuser:$USER` so only your UID may connect. Containers run as your UID/GID, so `.session/` files stay yours.
 
 ## Auth facts (do not try to automate around these)
 
-- Login is protected by a **captcha**. Never try to solve, bypass or farm it. A human solves it once in a real browser window (`edu session login` opens one through Playwright, using the configured proxy).
+- Login is protected by a **captcha**. Never try to solve, bypass or farm it. A human solves it once in a real browser window (`./edu session login` opens one through Playwright, using the configured proxy).
 - The session **expires after ~1 hour without activity**. `keepalive` sends a cheap authenticated request on an interval below that (default 45 min). Every command checks the session first and tells the user to log in again on expiry, not retry blindly.
 - The session cookie is stored in `.session/` (git-ignored, file mode 600). Never print full cookie values in logs, output, commits or knowledge files – mask all but the last 4 characters.
 
@@ -69,9 +75,10 @@ Never hardcode a host anywhere else – derive it from these settings. Other reg
 edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client **and** the Playwright login browser) goes through one proxy setting:
 
 - `EDU_PROXY` in `.env`, or `--proxy` on any command. Accepts `http://`, `https://`, `socks5://`, `socks5h://` (use `socks5h` to resolve DNS through the proxy), with optional `user:pass@`.
-- **Shadowsocks**: httpx and Chromium can't speak it, so `edu proxy up` runs a local `sslocal` (shadowsocks-rust, must be on `PATH` or set `EDU_SS_BIN`) from `EDU_SS_URL` (an `ss://` link) or `EDU_SS_CONFIG` (path to a JSON config), listening on `127.0.0.1:$EDU_SS_LOCAL_PORT` (default 1080). If `EDU_PROXY` is unset and Shadowsocks is configured, the effective proxy is `socks5h://127.0.0.1:<port>`.
+- **Shadowsocks**: httpx and Chromium can't speak it, so `./edu proxy up` starts the `ss` container running `sslocal` (shadowsocks-rust, baked into the image) from `EDU_SS_URL` (an `ss://` link) or `EDU_SS_CONFIG` (path to a JSON config **inside the repo**, e.g. `secrets/shadowsocks.json`, git-ignored). Its own local listener is replaced by `EDU_SS_BIND:EDU_SS_LOCAL_PORT`. If `EDU_PROXY` is unset, the effective proxy is `socks5h://$EDU_SS_HOST:<port>` – `ss` inside compose, `127.0.0.1` on the host.
 - No proxy configured means a direct connection. Never silently fall back to direct if a configured proxy fails – fail with a clear error.
 - `ss://` links and passwords are secrets: never print, log or commit them.
+- The proxy is **only** for edu.by traffic and downloads made by the containers (`edu`, `ss`). Never export it host-wide (`HTTP(S)_PROXY`, `ALL_PROXY`, system settings) or route Claude/Anthropic API traffic through it.
 
 ## Working rules
 
@@ -90,10 +97,10 @@ edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client *
 
 ## Style
 
-- Python: type hints, `ruff` for lint and format, `httpx` for HTTP, `typer` for CLI, `pydantic-settings` for config.
+- Python 3.10 (the base image's), type hints, `ruff` for lint and format, `httpx` for HTTP, `typer` for CLI, `pydantic-settings` for config.\n- Playwright's pip version must equal the base image tag (`Dockerfile`), or Chromium won't be found.
 - Never use the em dash (—) anywhere – write the en dash (–) instead, in code, docs, commit messages.
 - Constructor UI text is in Russian/Belarusian. Keep original UI labels verbatim in `knowledge/` (with a translation in parentheses) so agents can match them.
 
 ## Status
 
-Done: project skeleton, `session`, `proxy` (incl. Shadowsocks) and `browse` commands, `edu-session` skill. Next: HAR captures of login and typical constructor actions to verify `knowledge/auth.md` and start `knowledge/endpoints/`.
+Done: Docker runtime, `session`, `proxy` (incl. Shadowsocks) and `browse` commands, `edu-session` skill. Next: HAR captures of login and typical constructor actions to verify `knowledge/auth.md` and start `knowledge/endpoints/`.

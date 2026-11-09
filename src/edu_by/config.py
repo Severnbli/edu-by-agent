@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     ss_url: str | None = None
     ss_config: Path | None = None
     ss_local_port: int = 1080
+    ss_bind: str = "127.0.0.1"  # where sslocal listens (0.0.0.0 inside the ss container)
+    ss_host: str = "127.0.0.1"  # where clients reach sslocal ("ss" inside docker compose)
     ss_bin: str = "sslocal"
 
     session_dir: Path = Path(".session")
@@ -36,7 +38,7 @@ class Settings(BaseSettings):
         if self.proxy:
             return self.proxy
         if self.shadowsocks_configured:
-            return f"socks5h://127.0.0.1:{self.ss_local_port}"
+            return f"socks5h://{self.ss_host}:{self.ss_local_port}"
         return None
 
     @property

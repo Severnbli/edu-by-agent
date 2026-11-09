@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Run the edu CLI in Docker. Usage: ./edu <command> [args]  (./edu --help)
+# Extra: ./edu proxy up|down|logs   ./edu test [pytest args]   ./edu lint   ./edu build
+set -euo pipefail
+cd "$(dirname "$0")"
+
+export UID
+GID="$(id -g)"
+export GID
+mkdir -p .session
+
+case "${1:-} ${2:-}" in
+  "proxy up") exec docker compose up -d --build ss ;;
+  "proxy down") exec docker compose stop ss ;;
+  "proxy logs") exec docker compose logs -f ss ;;
+esac
+
+case "${1:-}" in
+  build) exec docker compose build ;;
+  test) shift; exec docker compose run --rm -T --entrypoint pytest edu "$@" ;;
+  lint) exec docker compose run --rm -T --entrypoint sh edu -c "ruff check . && ruff format --check ." ;;
+  fmt) exec docker compose run --rm -T --entrypoint sh edu -c "ruff check --fix . && ruff format ." ;;
+esac
+
+# The desktop browser needs the host X server; allow only this user (matched by UID).
+if [[ "${1:-}" == "browse" || "${1:-} ${2:-}" == "session login" ]]; then
+  xhost "+SI:localuser:$(id -un)" >/dev/null 2>&1 || echo "warning: xhost failed, the browser window may not open" >&2
+fi
+
+tty_flag=()
+[[ -t 0 ]] || tty_flag=(-T)
+exec docker compose run --rm "${tty_flag[@]}" edu "$@"
