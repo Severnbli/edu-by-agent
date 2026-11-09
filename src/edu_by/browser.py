@@ -8,9 +8,11 @@ expressed in PAC, so they're refused rather than proxying all traffic.
 from __future__ import annotations
 
 import base64
+import re
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from playwright.sync_api import BrowserContext, sync_playwright
@@ -59,7 +61,7 @@ def check_browser_proxy(settings: Settings) -> None:
 
 
 @contextmanager
-def open_browser(settings: Settings) -> Iterator[BrowserContext]:
+def open_browser(settings: Settings, har_path: Path | None = None) -> Iterator[BrowserContext]:
     check_browser_proxy(settings)
     proxy_url = settings.effective_proxy
     args: list[str] = []
@@ -71,6 +73,16 @@ def open_browser(settings: Settings) -> Iterator[BrowserContext]:
     profile.mkdir(parents=True, exist_ok=True)
     settings.session_dir.chmod(0o700)
 
+    har_kwargs: dict = {}
+    if har_path:
+        # Only edu.by requests; the HAR is written when the context closes.
+        har_path.parent.mkdir(parents=True, exist_ok=True)
+        har_kwargs = {
+            "record_har_path": str(har_path),
+            "record_har_content": "embed",
+            "record_har_url_filter": re.compile(r"^https?://([^/]*\.)?edu\.by(:\d+)?/"),
+        }
+
     with sync_playwright() as pw:
         context = pw.chromium.launch_persistent_context(
             str(profile),
@@ -78,6 +90,7 @@ def open_browser(settings: Settings) -> Iterator[BrowserContext]:
             args=args,
             no_viewport=True,
             locale="ru-RU",
+            **har_kwargs,
         )
         try:
             yield context
