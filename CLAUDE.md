@@ -34,8 +34,11 @@ Directories are created as the work reaches them – don't add empty scaffolding
 ## Commands
 
 ```bash
-uv sync                          # install
+uv sync                          # install (without uv: python3 -m venv .venv && .venv/bin/pip install -e . pytest ruff)
+uv run playwright install chromium   # once, for login/browse
 uv run edu --help
+uv run edu browse [URL]          # open any *.edu.by in desktop Chromium via the proxy (others go direct; --all proxies everything)
+uv run edu proxy pac             # write a PAC file routing *.edu.by via the proxy, for your own browser
 uv run edu session login         # open a browser, solve captcha, save the session
 uv run edu session import        # paste a cookie copied from DevTools instead
 uv run edu session check         # is the saved session still valid?
@@ -93,4 +96,4 @@ edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client *
 
 ## Status
 
-Initial setup: only `CLAUDE.md` and `LICENSE` (GPL-3.0) exist. Next: Python project skeleton, `session` and `proxy` commands, then the first traffic captures to fill `knowledge/auth.md`.
+Done: project skeleton, `session`, `proxy` (incl. Shadowsocks) and `browse` commands, `edu-session` skill. Next: HAR captures of login and typical constructor actions to verify `knowledge/auth.md` and start `knowledge/endpoints/`.
