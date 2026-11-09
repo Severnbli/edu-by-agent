@@ -96,9 +96,17 @@ class CheckResult:
 
 
 def check(settings: Settings, cookies: httpx.Cookies | None = None) -> CheckResult:
-    """Request the constructor page and decide whether we're logged in."""
+    """Ask SystemWJG.asmx/IsSession; fall back to loading the constructor page."""
     cookies = cookies if cookies is not None else load_cookies(settings)
+    service = settings.constructor_url.rsplit("/", 1)[0] + "/SystemWJG.asmx/IsSession"
     with make_client(settings, cookies=cookies) as client:
+        try:
+            r = client.post(service, json={})
+            if r.status_code == 200 and "json" in r.headers.get("content-type", ""):
+                ok = r.json().get("d") is True
+                return CheckResult(ok, 200, service, f"IsSession returned {r.json().get('d')!r}")
+        except (httpx.HTTPError, ValueError):
+            pass
         resp = client.get(settings.constructor_url)
     final = str(resp.url)
     target_path = urlsplit(settings.constructor_url).path.lower()
@@ -113,17 +121,26 @@ def check(settings: Settings, cookies: httpx.Cookies | None = None) -> CheckResu
     return CheckResult(True, resp.status_code, final, "constructor page loaded")
 
 
-def login_via_browser(settings: Settings) -> int:
-    """Open the login page in a desktop browser; the user logs in, then presses Enter."""
-    from edu_by.browser import open_browser
+LOGIN_TIMEOUT_MS = 10 * 60 * 1000
 
+
+def login_via_browser(settings: Settings) -> int:
+    """Open the login page (prefilled from settings); return once the constructor opens.
+
+    The user only solves the captcha and clicks the login button.
+    """
+    from edu_by.browser import attach_login_prefill, open_browser, prefill_login
+
+    target = urlsplit(settings.constructor_url).path.lower()
     with open_browser(settings) as context:
+        attach_login_prefill(context, settings)
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(settings.login_url)
-        input(
-            "Log in in the browser window (solve the captcha), then press Enter here "
-            "(keep the window open)... "
-        )
-        if urlsplit(page.url).path.lower() != urlsplit(settings.constructor_url).path.lower():
-            page.goto(settings.constructor_url)
+        prefill_login(page, settings)
+        try:
+            page.wait_for_url(
+                lambda url: urlsplit(url).path.lower() == target, timeout=LOGIN_TIMEOUT_MS
+            )
+        except Exception as e:
+            raise SessionError("Login not finished (window closed or 10 min timeout).") from e
         return save_cookies(settings, context.cookies())

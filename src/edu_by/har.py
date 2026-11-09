@@ -18,7 +18,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 REDACTED = "<redacted>"
 SENSITIVE_NAME = re.compile(
-    r"pass|pwd|captcha|token|secret|viewstate|eventvalidation|session|auth|cookie|key|csrf",
+    r"pass|pwd|pin|captcha|token|secret|viewstate|eventvalidation|session|auth|cookie|key|csrf|^gs$",
     re.I,
 )
 SENSITIVE_HEADER = re.compile(
@@ -26,6 +26,12 @@ SENSITIVE_HEADER = re.compile(
 )
 HIDDEN_INPUT_VALUE = re.compile(
     r'(<input[^>]*name="(?:__VIEWSTATE\w*|__EVENTVALIDATION|__PREVIOUSPAGE)"[^>]*value=")[^"]*(")',
+    re.I,
+)
+# Per-login GuidSession token: hidden input, gs= URL parameter, JS/JSON strings.
+GUID_SESSION = re.compile(
+    r'((?:name="ctl00\$GuidSession"[^>]*value="|[?&](?:amp;)?gs=|GuidSession\W{1,6}))'
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
     re.I,
 )
 # ASP.NET AJAX delta responses: |length|hiddenField|__VIEWSTATE|<value>|
@@ -61,6 +67,7 @@ def _redact_text(text: str, mime: str) -> str:
         except ValueError:
             pass
     text = HIDDEN_INPUT_VALUE.sub(rf"\1{REDACTED}\2", text)
+    text = GUID_SESSION.sub(rf"\1{REDACTED}", text)
     return DELTA_HIDDEN.sub(rf"\1{REDACTED}\2", text)
 
 
@@ -96,7 +103,7 @@ def _headers(headers: list[dict]) -> list[dict]:
         elif SENSITIVE_HEADER.match(name):
             result.append({**h, "value": REDACTED})
         else:
-            result.append(h)
+            result.append({**h, "value": GUID_SESSION.sub(rf"\1{REDACTED}", h.get("value", ""))})
     return result
 
 
@@ -171,7 +178,7 @@ def summarize(path: Path, include_static: bool = False) -> list[str]:
     counts: Counter[str] = Counter()
     order: list[str] = []
     for e in har.get("log", {}).get("entries", []):
-        req, resp = e["request"], e["response"]
+        req, resp = e["request"], e.get("response") or {"status": "FAILED"}
         parts = urlsplit(req["url"])
         if not include_static and STATIC.search(parts.path):
             continue

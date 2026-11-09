@@ -115,6 +115,16 @@ def test_check_valid(tmp_path):
     assert r.valid
 
 
+def test_check_uses_is_session(tmp_path):
+    def handler(req):
+        if req.url.path.endswith("/IsSession"):
+            return httpx.Response(200, json={"d": False})
+        return httpx.Response(200, text="<html>explorer</html>")
+
+    r = _check_with(tmp_path, handler)
+    assert not r.valid and "IsSession" in r.reason
+
+
 def test_check_redirect_to_login(tmp_path):
     def handler(req):
         if req.url.path == "/explorer.aspx":
@@ -337,3 +347,53 @@ def test_har_keeps_cookie_names():
     )
     assert hs[0]["value"] == "ASP.NET_SessionId=<redacted>; .ASPXAUTH=<redacted>"
     assert hs[1]["value"] == "a=<redacted>; path=/; HttpOnly\nb=<redacted>; secure"
+
+
+# ---------- webforms ----------
+
+
+def test_parse_form_and_delta():
+    from edu_by.webforms import parse_delta, parse_form
+
+    f = parse_form(
+        '<input type="hidden" name="__VIEWSTATE" value="vs"><input type="checkbox" name="c1" checked>'
+        '<input type="checkbox" name="c2"><input type="submit" name="b" value="x">'
+        '<select name="s"><option value="1">a</option><option value="2" selected>b</option></select>'
+        '<select name="s2"><option value="9">z</option></select><textarea name="t">hi &amp; bye</textarea>'
+    )
+    assert f == {"__VIEWSTATE": "vs", "c1": "on", "s": "2", "s2": "9", "t": "hi & bye"}
+    recs = parse_delta("1|#||4|5|updatePanel|p1|ab|cd|2|hiddenField|__VIEWSTATE|xy|")
+    assert [(r.type, r.id, r.content) for r in recs] == [
+        ("#", "", "4"),
+        ("updatePanel", "p1", "ab|cd"),
+        ("hiddenField", "__VIEWSTATE", "xy"),
+    ]
+
+
+def test_har_redacts_guid_session_everywhere():
+    from edu_by import har
+
+    g = "00000000-1111-2222-3333-444444444444"
+    e = har.sanitize_entry(
+        {
+            "request": {
+                "url": f"https://x.edu.by/R.aspx?guid=Head&gs={g}",
+                "headers": [{"name": "Referer", "value": f"https://x.edu.by/R.aspx?gs={g}"}],
+                "queryString": [{"name": "gs", "value": g}],
+            },
+            "response": {
+                "headers": [],
+                "content": {
+                    "mimeType": "text/html",
+                    "text": f'<input name="ctl00$GuidSession" id="GuidSession" value="{g}" /><a href="/R.aspx?guid=1&amp;gs={g}">',
+                },
+            },
+        }
+    )
+    assert g not in json.dumps(e)
+
+
+def test_password_is_secret(tmp_path):
+    s = make(tmp_path, password="hunter2", username="u", site="s.edu.by")
+    assert "hunter2" not in repr(s) and "hunter2" not in str(s.model_dump())
+    assert s.password.get_secret_value() == "hunter2"

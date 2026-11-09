@@ -7,3 +7,9 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 secrets/
+
+# editor swap/backup files (may hold .env contents)
+*.swp
+*.swo
+*~
+.*.sw?
