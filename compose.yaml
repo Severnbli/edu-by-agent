@@ -1,0 +1,39 @@
+# Use through ./edu (it sets UID/GID and X11 access). The repo is bind-mounted at /app,
+# so code changes apply without a rebuild and .env / .session are read from the repo.
+#
+# All services use host networking: proxies listen on 127.0.0.1 and are reachable from
+# both the edu container and your own desktop browser, and the direct proxy can bind to a
+# physical interface (bypassing VPN routes). It also avoids bridge MTU problems on VPNs.
+x-edu: &edu
+  build:
+    context: .
+    network: host
+  image: edu-by:dev
+  user: "${UID:-1000}:${GID:-1000}"
+  working_dir: /app
+  init: true
+  network_mode: host
+  volumes:
+    - .:/app
+
+services:
+  # Direct mode (EDU_INTERFACE=wlo1): HTTP proxy on 127.0.0.1:1081, out via that interface.
+  direct:
+    <<: *edu
+    command: ["proxy", "direct"]
+    restart: unless-stopped
+
+  # Shadowsocks mode (EDU_SS_URL / EDU_SS_CONFIG): SOCKS5 on 127.0.0.1:1080.
+  ss:
+    <<: *edu
+    command: ["proxy", "up"]
+    restart: unless-stopped
+
+  edu:
+    <<: *edu
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+    volumes:
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    shm_size: 1gb
