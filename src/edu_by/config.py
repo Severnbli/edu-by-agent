@@ -16,11 +16,14 @@ class Settings(BaseSettings):
     constructor_url: str = "https://wp.brest-region.edu.by/explorer.aspx"
 
     proxy: str | None = None
+    # Direct mode: reach the site over this interface (e.g. wlo1), bypassing a VPN route.
+    interface: str | None = None
+    direct_port: int = 1081
     ss_url: str | None = None
     ss_config: Path | None = None
     ss_local_port: int = 1080
-    ss_bind: str = "127.0.0.1"  # where sslocal listens (0.0.0.0 inside the ss container)
-    ss_host: str = "127.0.0.1"  # where clients reach sslocal ("ss" inside docker compose)
+    ss_bind: str = "127.0.0.1"  # where sslocal listens
+    ss_host: str = "127.0.0.1"  # where clients reach sslocal
     ss_bin: str = "sslocal"
 
     session_dir: Path = Path(".session")
@@ -34,9 +37,11 @@ class Settings(BaseSettings):
 
     @property
     def effective_proxy(self) -> str | None:
-        """Explicit EDU_PROXY wins; otherwise the local Shadowsocks SOCKS port, if configured."""
+        """EDU_PROXY wins, then direct mode (EDU_INTERFACE), then Shadowsocks."""
         if self.proxy:
             return self.proxy
+        if self.interface:
+            return f"http://127.0.0.1:{self.direct_port}"
         if self.shadowsocks_configured:
             return f"socks5h://{self.ss_host}:{self.ss_local_port}"
         return None

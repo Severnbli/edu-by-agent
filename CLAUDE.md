@@ -40,10 +40,10 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ```bash
 ./edu build                      # build the image (Playwright Chromium + sslocal + the package)
 ./edu --help
-./edu proxy up                   # start the Shadowsocks container (ss, SOCKS5 on 127.0.0.1:1080 too)
+./edu proxy up                   # start the proxy container for the configured mode (direct or ss)
 ./edu proxy down | logs
 ./edu proxy check                # exit IP and whether the login/constructor pages are reachable
-./edu proxy pac                  # PAC file routing *.edu.by via 127.0.0.1:1080, for your own browser
+./edu proxy pac                  # PAC file routing *.edu.by via the proxy, for your own browser
 ./edu browse [URL]               # any *.edu.by in a desktop Chromium window via the proxy (--all proxies everything)
 ./edu session login              # browser window: log in, solve captcha, press Enter -> session saved
 ./edu session import             # paste a Cookie header copied from DevTools instead
@@ -75,7 +75,9 @@ Never hardcode a host anywhere else – derive it from these settings. Other reg
 edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client **and** the Playwright login browser) goes through one proxy setting:
 
 - `EDU_PROXY` in `.env`, or `--proxy` on any command. Accepts `http://`, `https://`, `socks5://`, `socks5h://` (use `socks5h` to resolve DNS through the proxy), with optional `user:pass@`.
-- **Shadowsocks**: httpx and Chromium can't speak it, so `./edu proxy up` starts the `ss` container running `sslocal` (shadowsocks-rust, baked into the image) from `EDU_SS_URL` (an `ss://` link) or `EDU_SS_CONFIG` (path to a JSON config **inside the repo**, e.g. `secrets/shadowsocks.json`, git-ignored). Its own local listener is replaced by `EDU_SS_BIND:EDU_SS_LOCAL_PORT`. If `EDU_PROXY` is unset, the effective proxy is `socks5h://$EDU_SS_HOST:<port>` – `ss` inside compose, `127.0.0.1` on the host.
+- **Direct mode** (`EDU_INTERFACE=wlo1`, the current setup): the host's default route goes through a WireGuard VPN (`wg2`) that can't reach the site, while the physical uplink can. `./edu proxy up` starts the `direct` container – a small built-in HTTP proxy (`edu proxy direct`, `src/edu_by/direct_proxy.py`) on `127.0.0.1:$EDU_DIRECT_PORT` (1081) whose outgoing sockets are bound to that interface (`SO_BINDTODEVICE`, no root needed). Takes priority over Shadowsocks.
+- **Shadowsocks**: httpx and Chromium can't speak it, so `./edu proxy up` starts the `ss` container running `sslocal` (shadowsocks-rust, baked into the image) from `EDU_SS_URL` (an `ss://` link) or `EDU_SS_CONFIG` (path to a JSON config **inside the repo**, e.g. `secrets/shadowsocks.json`, git-ignored). Its own local listener is replaced by `127.0.0.1:$EDU_SS_LOCAL_PORT` (1080). Note: in testing (2026-11-09) the provided Shadowsocks exit could not reach wp.brest-region.edu.by.
+- Priority: `EDU_PROXY` > direct mode > Shadowsocks. All containers use **host networking**, so these `127.0.0.1` proxies work from the containers and from your own browser alike.
 - No proxy configured means a direct connection. Never silently fall back to direct if a configured proxy fails – fail with a clear error.
 - `ss://` links and passwords are secrets: never print, log or commit them.
 - The proxy is **only** for edu.by traffic and downloads made by the containers (`edu`, `ss`). Never export it host-wide (`HTTP(S)_PROXY`, `ALL_PROXY`, system settings) or route Claude/Anthropic API traffic through it.
@@ -103,4 +105,4 @@ edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client *
 
 ## Status
 
-Done: Docker runtime, `session`, `proxy` (incl. Shadowsocks) and `browse` commands, `edu-session` skill. Next: HAR captures of login and typical constructor actions to verify `knowledge/auth.md` and start `knowledge/endpoints/`.
+Done: Docker runtime, `session`, `proxy` (direct mode + Shadowsocks) and `browse` commands, `edu-session` skill. Verified: login page and desktop browser reachable in direct mode. Next: HAR captures of login and typical constructor actions to verify `knowledge/auth.md` and start `knowledge/endpoints/`.

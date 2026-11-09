@@ -9,10 +9,20 @@ GID="$(id -g)"
 export GID
 mkdir -p .session
 
+# Proxy service for the configured mode: direct (EDU_INTERFACE) wins over Shadowsocks.
+env_set() { [[ -n "${!1:-}" ]] || grep -qE "^$1=.+" .env 2>/dev/null; }
+if env_set EDU_PROXY; then proxy_svc=""
+elif env_set EDU_INTERFACE; then proxy_svc=direct
+elif env_set EDU_SS_URL || env_set EDU_SS_CONFIG; then proxy_svc=ss
+else proxy_svc=""; fi
+
 case "${1:-} ${2:-}" in
-  "proxy up") exec docker compose up -d --build ss ;;
-  "proxy down") exec docker compose stop ss ;;
-  "proxy logs") exec docker compose logs -f ss ;;
+  "proxy up")
+    [[ -n "$proxy_svc" ]] || { echo "Nothing to start: EDU_PROXY is used as is, or no proxy is configured." >&2; exit 1; }
+    docker compose stop direct ss >/dev/null 2>&1 || true
+    exec docker compose up -d "$proxy_svc" ;;
+  "proxy down") exec docker compose stop direct ss ;;
+  "proxy logs") exec docker compose logs -f direct ss ;;
 esac
 
 case "${1:-}" in

@@ -40,7 +40,11 @@ def _fail(msg: str, code: int = 1) -> None:
 
 
 def _proxy_error(s: Settings, e: Exception) -> None:
-    hint = " Is the ss container running (`./edu proxy up`)?" if s.shadowsocks_configured and not s.proxy else ""
+    hint = (
+        " Is the proxy container running (`./edu proxy up`)?"
+        if not s.proxy and (s.interface or s.shadowsocks_configured)
+        else ""
+    )
     _fail(f"Connection failed via {mask_proxy(s.effective_proxy)}: {e}.{hint}")
 
 
@@ -144,6 +148,25 @@ def proxy_up() -> None:
     raise typer.Exit(shadowsocks.run(s))
 
 
+@proxy_app.command("direct")
+def proxy_direct(
+    interface: Annotated[
+        str | None, typer.Option(help="Outgoing interface, default EDU_INTERFACE.")
+    ] = None,
+    port: Annotated[int | None, typer.Option(help="Listen port, default EDU_DIRECT_PORT.")] = None,
+) -> None:
+    """Run a local HTTP proxy that sends traffic out of one interface (bypasses VPN routes)."""
+    from edu_by import direct_proxy
+
+    s = get_settings()
+    iface = interface or s.interface
+    if not iface:
+        _fail("Set EDU_INTERFACE (e.g. wlo1) or pass --interface.")
+    listen = port or s.direct_port
+    typer.echo(f"Direct proxy on http://127.0.0.1:{listen} -> out via {iface} (Ctrl+C to stop)")
+    direct_proxy.run("127.0.0.1", listen, iface)
+
+
 @proxy_app.command("check")
 def proxy_check(proxy: ProxyOpt = None) -> None:
     """Show the exit IP and whether the login and constructor pages are reachable."""
@@ -172,14 +195,11 @@ def proxy_pac(
 ) -> None:
     """Write a PAC file routing *.edu.by via the proxy, for your own desktop browser.
 
-    With Shadowsocks it points at 127.0.0.1:<EDU_SS_LOCAL_PORT>, the port the ss
-    container publishes on the host.
+    Containers use host networking, so the proxy address works from the host as is.
     """
     from edu_by.browser import pac_script
 
     s = _settings(proxy)
-    if not s.proxy and s.shadowsocks_configured:
-        s = s.model_copy(update={"ss_host": "127.0.0.1"})
     if not s.effective_proxy:
         _fail("No proxy configured (EDU_PROXY or EDU_SS_URL / EDU_SS_CONFIG).")
     out.parent.mkdir(parents=True, exist_ok=True)

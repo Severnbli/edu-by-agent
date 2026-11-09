@@ -11,6 +11,12 @@ updated: 2026-11-09
 - Constructor: `EDU_CONSTRUCTOR_URL`, for Brest region `https://wp.brest-region.edu.by/explorer.aspx`.
 - Login form has a **captcha** – a human must log in in a real browser (`edu session login` / `edu browse`).
 - The session expires after **~1 hour without activity**.
+- Login page title: `Вход в систему` (Log in to the system). (observed 2026-11-09)
+- Without a session, `GET /explorer.aspx` returns **302 → `/login_end.aspx`**. `edu session check` treats any redirect away from `explorer.aspx` as logged out. (observed 2026-11-09)
+
+## Network (observed 2026-11-09)
+
+- Reachable directly from a Belarusian ISP uplink (`wlo1`). Not reachable through the WireGuard VPN `wg2`, nor through the provided Shadowsocks exit (TCP connects time out).
 
 ## Unverified (needs a HAR capture)
 

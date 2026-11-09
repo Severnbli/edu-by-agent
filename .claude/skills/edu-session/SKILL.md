@@ -9,7 +9,7 @@ All commands run from the repo root through Docker: `./edu ...`.
 
 ## 1. Make sure the proxy works
 
-- Shadowsocks (`EDU_SS_URL` or `EDU_SS_CONFIG` set): the `ss` container must be running – `./edu proxy up` starts it (detached), `docker compose ps ss` shows it.
+- Direct mode (`EDU_INTERFACE`) or Shadowsocks (`EDU_SS_URL` / `EDU_SS_CONFIG`): the `direct` or `ss` container must be running – `./edu proxy up` starts the right one (detached), `docker compose ps` shows it.
 - Then run `./edu proxy check`. Expect an exit IP and HTTP 200 for the login and constructor URLs.
 - On connection errors, report the error to the user. Never fall back to a direct connection.
 
