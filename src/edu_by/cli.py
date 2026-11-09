@@ -54,7 +54,13 @@ def _proxy_error(s: Settings, e: Exception) -> None:
 @session_app.command("login")
 def session_login(proxy: ProxyOpt = None) -> None:
     """Open the login page in a desktop browser, log in by hand, save the session."""
+    from edu_by.browser import check_browser_proxy
+
     s = _settings(proxy)
+    try:
+        check_browser_proxy(s)
+    except ValueError as e:
+        _fail(str(e))
     typer.echo(f"Proxy: {mask_proxy(s.effective_proxy)}  Login: {s.login_url}")
     n = sess.login_via_browser(s)
     typer.echo(f"Saved {n} cookie(s) to {s.cookies_file}")
@@ -169,15 +175,13 @@ def proxy_direct(
 
 @proxy_app.command("check")
 def proxy_check(proxy: ProxyOpt = None) -> None:
-    """Show the exit IP and whether the login and constructor pages are reachable."""
+    """Check that the login and constructor pages are reachable through the proxy."""
     s = _settings(proxy)
     typer.echo(f"Proxy: {mask_proxy(s.effective_proxy)}")
     from edu_by.http import make_client
 
     try:
         with make_client(s) as client:
-            ip = client.get(s.ip_check_url).json().get("ip", "?")
-            typer.echo(f"Exit IP: {ip}")
             for url in (s.login_url, s.constructor_url):
                 t = time.monotonic()
                 resp = client.get(url)
@@ -214,29 +218,26 @@ def proxy_pac(
 @app.command("browse")
 def browse(
     url: Annotated[str | None, typer.Argument(help="Page to open, default EDU_LOGIN_URL.")] = None,
-    all_traffic: Annotated[
-        bool, typer.Option("--all", help="Proxy all sites, not just *.edu.by.")
-    ] = False,
     save_session: Annotated[
         bool, typer.Option(help="Save site cookies to the session when the browser closes.")
     ] = True,
     proxy: ProxyOpt = None,
 ) -> None:
     """Open any *.edu.by site in a desktop browser through the configured proxy."""
-    from edu_by.browser import is_edu_by, open_browser, run_until_closed
+    from edu_by.browser import check_browser_proxy, is_edu_by, open_browser, run_until_closed
 
     s = _settings(proxy)
     url = url or s.login_url
     if "://" not in url:
         url = "https://" + url
-    if not is_edu_by(url) and not all_traffic:
-        typer.secho(
-            f"{url} is not under edu.by – it will NOT go through the proxy "
-            "(use --all to proxy everything).",
-            fg="yellow",
-        )
+    if not is_edu_by(url):
+        typer.secho(f"{url} is not under edu.by – it will open without the proxy.", fg="yellow")
     typer.echo(f"Proxy: {mask_proxy(s.effective_proxy)}. Close the browser window to finish.")
-    with open_browser(s, proxy_all=all_traffic) as context:
+    try:
+        check_browser_proxy(s)
+    except ValueError as e:
+        _fail(str(e))
+    with open_browser(s) as context:
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(url)
         cookies = run_until_closed(context)

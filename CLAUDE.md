@@ -42,9 +42,9 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu --help
 ./edu proxy up                   # start the proxy container for the configured mode (direct or ss)
 ./edu proxy down | logs
-./edu proxy check                # exit IP and whether the login/constructor pages are reachable
+./edu proxy check                # whether the login/constructor pages are reachable through the proxy
 ./edu proxy pac                  # PAC file routing *.edu.by via the proxy, for your own browser
-./edu browse [URL]               # any *.edu.by in a desktop Chromium window via the proxy (--all proxies everything)
+./edu browse [URL]               # any *.edu.by in a desktop Chromium window via the proxy (other sites direct)
 ./edu session login              # browser window: log in, solve captcha, press Enter -> session saved
 ./edu session import             # paste a Cookie header copied from DevTools instead
 ./edu session check              # exit 0 valid, 2 expired
@@ -53,7 +53,7 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu lint | fmt                 # ruff check / fix + format
 ```
 
-Desktop windows use the host X server (`/tmp/.X11-unix`, works with XWayland); `./edu` runs `xhost +SI:localuser:$USER` so only your UID may connect. Containers run as your UID/GID, so `.session/` files stay yours.
+The browser is the **Chromium bundled in the image** (from the Playwright base image), not one installed on the host; its profile is `.session/browser-profile`. Desktop windows use the host X server (`/tmp/.X11-unix`, works with XWayland); `./edu` runs `xhost +SI:localuser:$USER` so only your UID may connect. Containers run as your UID/GID, so `.session/` files stay yours.
 
 ## Auth facts (do not try to automate around these)
 
@@ -72,7 +72,7 @@ Never hardcode a host anywhere else – derive it from these settings. Other reg
 
 ## Proxy
 
-edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client **and** the Playwright login browser) goes through one proxy setting:
+edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by` and `*.edu.by`, from the httpx client **and** the Playwright browser) goes through one proxy setting. Everything else is direct:
 
 - `EDU_PROXY` in `.env`, or `--proxy` on any command. Accepts `http://`, `https://`, `socks5://`, `socks5h://` (use `socks5h` to resolve DNS through the proxy), with optional `user:pass@`.
 - **Direct mode** (`EDU_INTERFACE=wlo1`, the current setup): the host's default route goes through a WireGuard VPN (`wg2`) that can't reach the site, while the physical uplink can. `./edu proxy up` starts the `direct` container – a small built-in HTTP proxy (`edu proxy direct`, `src/edu_by/direct_proxy.py`) on `127.0.0.1:$EDU_DIRECT_PORT` (1081) whose outgoing sockets are bound to that interface (`SO_BINDTODEVICE`, no root needed). Takes priority over Shadowsocks.
@@ -80,7 +80,9 @@ edu.by may be reachable only from Belarusian IPs, so all traffic (httpx client *
 - Priority: `EDU_PROXY` > direct mode > Shadowsocks. All containers use **host networking**, so these `127.0.0.1` proxies work from the containers and from your own browser alike.
 - No proxy configured means a direct connection. Never silently fall back to direct if a configured proxy fails – fail with a clear error.
 - `ss://` links and passwords are secrets: never print, log or commit them.
-- The proxy is **only** for edu.by traffic and downloads made by the containers (`edu`, `ss`). Never export it host-wide (`HTTP(S)_PROXY`, `ALL_PROXY`, system settings) or route Claude/Anthropic API traffic through it.
+- The proxy is **only** for edu.by traffic. Enforced in code: the httpx client mounts the proxy only for `edu.by` / `*.edu.by` (and ignores host proxy env vars), and the browser uses a PAC that sends only those hosts to the proxy.
+- Everything else is **local (direct)**: image builds, package and binary downloads, IP/diagnostic lookups, third-party assets in the browser, and Claude/Anthropic API traffic. Never send non-edu.by requests through the proxy, never export it host-wide (`HTTP(S)_PROXY`, `ALL_PROXY`, system settings), and don't add a "proxy everything" option.
+- A proxy with credentials can't be expressed in PAC, so the browser refuses it instead of proxying all traffic.
 
 ## Working rules
 
