@@ -1,0 +1,8 @@
+.env
+.session/
+*.har
+!knowledge/captures/*.har
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
