@@ -54,11 +54,22 @@ def _proxy_error(s: Settings, e: Exception) -> None:
 
 
 @session_app.command("login")
-def session_login(proxy: ProxyOpt = None) -> None:
+def session_login(
+    security: Annotated[
+        str | None,
+        typer.Option(
+            help="Login security level, default Hight (recommended). Lower levels make the "
+            "WJG cookie remember the site, username (Low) and probably the password (Zero)."
+        ),
+    ] = None,
+    proxy: ProxyOpt = None,
+) -> None:
     """Log in via a desktop browser: form prefilled from .env, you solve the captcha."""
     from edu_by.browser import check_browser_proxy
 
     s = _settings(proxy)
+    if security:
+        s = s.model_copy(update={"security": security})
     try:
         check_browser_proxy(s)
     except ValueError as e:

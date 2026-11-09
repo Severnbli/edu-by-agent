@@ -137,8 +137,7 @@ def prefill_login(page: Page, settings: Settings) -> bool:
         for key, selector in LOGIN_FIELDS.items():
             if values[key] and not page.input_value(selector):
                 page.fill(selector, values[key])
-        if settings.security:
-            page.select_option("#ListSecurity", settings.security)
+        page.select_option("#ListSecurity", settings.security)
         page.focus("#TextBoxPin")
         return True
     except Exception:  # page navigated away or form changed – the user can type by hand

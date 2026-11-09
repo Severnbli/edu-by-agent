@@ -12,6 +12,7 @@ The repo has three layers, built in this order:
 
 ```
 CLAUDE.md
+TASKS.md                  # backlog for the next sessions
 pyproject.toml            # Python 3.10+ package
 Dockerfile, compose.yaml  # the only supported runtime
 edu                       # wrapper: ./edu <command>
@@ -114,5 +115,5 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Status
 
-Done: Docker runtime, `session` (login prefilled from `.env`), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill. Mapped from the first capture: login, data model, explorer postbacks, section/object dialogs, SystemWJG service (see `knowledge/README.md`).
-Next: capture saving object content, publishing and uploads; then build `api/` modules (read-only first: list tree, list objects, read object) and skills on top.
+Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill. The first capture is mapped in `knowledge/`.
+**Next work is listed in [`TASKS.md`](TASKS.md)** – start there, and update it as you finish tasks.

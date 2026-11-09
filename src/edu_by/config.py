@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     site: str | None = None  # e.g. sch1.example.edu.by
     username: str | None = None
     password: SecretStr | None = None
-    security: str | None = None  # ListSecurity: Hight | Medium | Low | Zero (site default: Hight)
+    # ListSecurity: how much the 30-day WJG cookie remembers. Hight = nothing from the form
+    # (Medium + site, Low + username, Zero probably + password). Keep Hight.
+    security: str = "Hight"
 
     proxy: str | None = None
     # Direct mode: reach the site over this interface (e.g. wlo1), bypassing a VPN route.
