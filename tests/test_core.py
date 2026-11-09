@@ -324,3 +324,16 @@ def test_har_sanitize_removes_secrets(tmp_path):
     assert oct(dst.stat().st_mode & 0o777) == "0o600"
     lines = har.summarize(dst)
     assert len(lines) == 1 and "fields=login,password,captcha,__VIEWSTATE" in lines[0]
+
+
+def test_har_keeps_cookie_names():
+    from edu_by import har
+
+    hs = har._headers(
+        [
+            {"name": "Cookie", "value": "ASP.NET_SessionId=abc; .ASPXAUTH=def"},
+            {"name": "set-cookie", "value": "a=1; path=/; HttpOnly\nb=2; secure"},
+        ]
+    )
+    assert hs[0]["value"] == "ASP.NET_SessionId=<redacted>; .ASPXAUTH=<redacted>"
+    assert hs[1]["value"] == "a=<redacted>; path=/; HttpOnly\nb=<redacted>; secure"

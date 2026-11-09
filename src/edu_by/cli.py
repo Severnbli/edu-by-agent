@@ -226,8 +226,8 @@ def browse(
     har: Annotated[
         str | None,
         typer.Option(
-            help="Record edu.by traffic to .session/har/<NAME>.har; a sanitized "
-            "<NAME>.sanitized.har is written when the browser closes."
+            help="Record edu.by traffic to .session/har/<NAME>.*.jsonl as it happens; "
+            "<NAME>.sanitized.har is built when the browser closes."
         ),
     ] = None,
     proxy: ProxyOpt = None,
@@ -246,23 +246,25 @@ def browse(
         check_browser_proxy(s)
     except ValueError as e:
         _fail(str(e))
-    raw_har = s.session_dir / "har" / f"{har}.har" if har else None
-    if raw_har:
-        typer.echo(f"Recording edu.by traffic to {raw_har}")
-    with open_browser(s, har_path=raw_har) as context:
+    recorder = None
+    if har:
+        from edu_by import har as har_mod
+
+        recorder = har_mod.Recorder(s.session_dir / "har" / har, is_edu_by)
+        typer.echo(f"Recording edu.by traffic to {recorder.clean_path} (+ raw, never share it)")
+    on_cookies = (lambda c: sess.save_cookies(s, c)) if save_session else None
+    with open_browser(s) as context:
+        if recorder:
+            recorder.attach(context)
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(url)
-        cookies = run_until_closed(context)
+        cookies = run_until_closed(context, on_cookies=on_cookies)
     if save_session and cookies:
         n = sess.save_cookies(s, cookies)
         typer.echo(f"Saved {n} site cookie(s) to {s.cookies_file}")
-    if raw_har and raw_har.exists():
-        from edu_by import har as har_mod
-
-        raw_har.chmod(0o600)
-        clean = raw_har.with_suffix(".sanitized.har")
-        n = har_mod.sanitize(raw_har, clean)
-        typer.echo(f"HAR: {n} request(s). Sanitized copy: {clean}")
+    if recorder:
+        out = recorder.finish()
+        typer.echo(f"Recorded {recorder.count} request(s). Sanitized HAR: {out}")
 
 
 # ---------- har ----------
@@ -286,8 +288,10 @@ def har_summary(
     """List distinct request shapes in a (sanitized) HAR."""
     from edu_by import har as har_mod
 
-    if not path.name.endswith(".sanitized.har"):
-        _fail("Summarize the sanitized HAR (*.sanitized.har), not the raw one.")
+    if ".sanitized." not in path.name:
+        _fail(
+            "Summarize the sanitized capture (*.sanitized.har / *.sanitized.jsonl), not the raw one."
+        )
     for line in har_mod.summarize(path, include_static=static):
         typer.echo(line)
 

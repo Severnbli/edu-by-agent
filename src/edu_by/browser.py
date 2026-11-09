@@ -8,11 +8,10 @@ expressed in PAC, so they're refused rather than proxying all traffic.
 from __future__ import annotations
 
 import base64
-import re
+import contextlib
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from pathlib import Path
 from urllib.parse import urlsplit
 
 from playwright.sync_api import BrowserContext, sync_playwright
@@ -61,7 +60,7 @@ def check_browser_proxy(settings: Settings) -> None:
 
 
 @contextmanager
-def open_browser(settings: Settings, har_path: Path | None = None) -> Iterator[BrowserContext]:
+def open_browser(settings: Settings) -> Iterator[BrowserContext]:
     check_browser_proxy(settings)
     proxy_url = settings.effective_proxy
     args: list[str] = []
@@ -73,16 +72,6 @@ def open_browser(settings: Settings, har_path: Path | None = None) -> Iterator[B
     profile.mkdir(parents=True, exist_ok=True)
     settings.session_dir.chmod(0o700)
 
-    har_kwargs: dict = {}
-    if har_path:
-        # Only edu.by requests; the HAR is written when the context closes.
-        har_path.parent.mkdir(parents=True, exist_ok=True)
-        har_kwargs = {
-            "record_har_path": str(har_path),
-            "record_har_content": "embed",
-            "record_har_url_filter": re.compile(r"^https?://([^/]*\.)?edu\.by(:\d+)?/"),
-        }
-
     with sync_playwright() as pw:
         context = pw.chromium.launch_persistent_context(
             str(profile),
@@ -90,26 +79,36 @@ def open_browser(settings: Settings, har_path: Path | None = None) -> Iterator[B
             args=args,
             no_viewport=True,
             locale="ru-RU",
-            **har_kwargs,
         )
         try:
             yield context
         finally:
-            context.close()
+            # Fails harmlessly if the user already closed the window.
+            with contextlib.suppress(Exception):
+                context.close()
 
 
-def run_until_closed(context: BrowserContext, poll_seconds: float = 2) -> list[dict]:
+def run_until_closed(
+    context: BrowserContext,
+    on_cookies: Callable[[list[dict]], None] | None = None,
+    poll_seconds: float = 2,
+) -> list[dict]:
     """Block until the user closes the browser; return the last cookie snapshot.
 
-    Cookies can't be read once the browser is gone, so they're snapshotted while it runs.
+    Cookies can't be read once the browser is gone, so they're snapshotted while it runs
+    and handed to `on_cookies` whenever they change (so nothing is lost on a crash).
     """
     closed: list[bool] = []
     context.on("close", lambda _: closed.append(True))
     snapshot: list[dict] = []
     while not closed:
         try:
-            snapshot = context.cookies()
+            current = context.cookies()
         except Exception:
             break
+        if on_cookies and current != snapshot:
+            with contextlib.suppress(Exception):
+                on_cookies(current)
+        snapshot = current
         time.sleep(poll_seconds)
     return snapshot
