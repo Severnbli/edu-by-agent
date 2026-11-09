@@ -10,6 +10,15 @@ from edu_by.browser import is_edu_by, pac_script
 from edu_by.config import Settings, mask, mask_proxy
 
 
+@pytest.fixture(autouse=True)
+def _no_edu_env(monkeypatch):
+    """Tests must not see EDU_* from the container or the developer's shell."""
+    import os
+
+    for key in [k for k in os.environ if k.startswith("EDU_")]:
+        monkeypatch.delenv(key)
+
+
 def make(tmp_path: Path, **kw) -> Settings:
     return Settings(_env_file=None, session_dir=tmp_path / ".session", **kw)
 
@@ -123,12 +132,23 @@ def test_shadowsocks_command_from_url(tmp_path, monkeypatch):
     assert cmd == ["/usr/bin/sslocal", "-b", "127.0.0.1:1081", "--server-url", "ss://abc@host:8388"]
 
 
-def test_shadowsocks_config_with_own_local(tmp_path, monkeypatch):
+def test_shadowsocks_config_drops_own_local(tmp_path, monkeypatch):
     monkeypatch.setattr(shadowsocks.shutil, "which", lambda b: "/usr/bin/sslocal")
     cfg = tmp_path / "ss.json"
-    cfg.write_text(json.dumps({"server": "h", "server_port": 1, "local_port": 1080}))
-    cmd = shadowsocks.build_command(make(tmp_path, ss_config=cfg))
-    assert "-b" not in cmd
+    cfg.write_text(
+        json.dumps({"server": "h", "server_port": 1, "password": "p", "local_port": 1080})
+    )
+    s = make(tmp_path, ss_config=cfg, ss_bind="0.0.0.0")
+    cmd = shadowsocks.build_command(s)
+    assert cmd[-2:] == ["-b", "0.0.0.0:1080"]
+    written = json.loads(Path(cmd[2]).read_text())
+    assert "local_port" not in written and written["server"] == "h"
+    assert oct(Path(cmd[2]).stat().st_mode & 0o777) == "0o600"
+
+
+def test_effective_proxy_uses_ss_host(tmp_path):
+    s = make(tmp_path, ss_url="ss://x", ss_host="ss")
+    assert s.effective_proxy == "socks5h://ss:1080"
 
 
 def test_shadowsocks_missing_binary(tmp_path, monkeypatch):

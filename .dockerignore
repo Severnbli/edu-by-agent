@@ -1,0 +1,7 @@
+.git
+.venv
+.session
+.env
+secrets
+knowledge/captures
+**/__pycache__

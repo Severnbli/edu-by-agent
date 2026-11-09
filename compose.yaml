@@ -1,0 +1,42 @@
+# Use through ./edu (it sets UID/GID and X11 access). The repo is bind-mounted at /app,
+# so code changes apply without a rebuild and .env / .session are read from the repo.
+x-edu: &edu
+  build:
+    context: .
+    # Host network for the build: on a VPN (e.g. WireGuard, MTU 1420) the default bridge
+    # (MTU 1500) drops large TLS packets and downloads hang.
+    network: host
+  image: edu-by:dev
+  user: "${UID:-1000}:${GID:-1000}"
+  working_dir: /app
+  init: true
+  volumes:
+    - .:/app
+
+services:
+  # Shadowsocks -> SOCKS5. Reachable as ss:1080 from other services and on the host
+  # at 127.0.0.1:1080 (for your own browser with `./edu proxy pac`).
+  ss:
+    <<: *edu
+    command: ["proxy", "up"]
+    environment:
+      EDU_SS_BIND: 0.0.0.0
+    ports:
+      - "127.0.0.1:${EDU_SS_LOCAL_PORT:-1080}:${EDU_SS_LOCAL_PORT:-1080}"
+    restart: unless-stopped
+
+  edu:
+    <<: *edu
+    environment:
+      EDU_SS_HOST: ss
+      DISPLAY: ${DISPLAY:-:0}
+    volumes:
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    shm_size: 1gb
+
+networks:
+  default:
+    driver_opts:
+      # Below typical VPN MTUs (WireGuard 1420) so TLS works over a host VPN too.
+      com.docker.network.driver.mtu: "1380"
