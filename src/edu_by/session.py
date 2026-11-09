@@ -120,7 +120,10 @@ def login_via_browser(settings: Settings) -> int:
     with open_browser(settings) as context:
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(settings.login_url)
-        input("Log in in the browser window (solve the captcha), then press Enter here... ")
+        input(
+            "Log in in the browser window (solve the captcha), then press Enter here "
+            "(keep the window open)... "
+        )
         if urlsplit(page.url).path.lower() != urlsplit(settings.constructor_url).path.lower():
             page.goto(settings.constructor_url)
         return save_cookies(settings, context.cookies())
