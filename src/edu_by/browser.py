@@ -8,12 +8,13 @@ expressed in PAC, so they're refused rather than proxying all traffic.
 from __future__ import annotations
 
 import base64
+import contextlib
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from urllib.parse import urlsplit
 
-from playwright.sync_api import BrowserContext, sync_playwright
+from playwright.sync_api import BrowserContext, Page, sync_playwright
 
 from edu_by.config import Settings
 from edu_by.http import PROXIED_DOMAIN
@@ -82,21 +83,75 @@ def open_browser(settings: Settings) -> Iterator[BrowserContext]:
         try:
             yield context
         finally:
-            context.close()
+            # Fails harmlessly if the user already closed the window.
+            with contextlib.suppress(Exception):
+                context.close()
 
 
-def run_until_closed(context: BrowserContext, poll_seconds: float = 2) -> list[dict]:
+def run_until_closed(
+    context: BrowserContext,
+    on_cookies: Callable[[list[dict]], None] | None = None,
+    poll_seconds: float = 2,
+) -> list[dict]:
     """Block until the user closes the browser; return the last cookie snapshot.
 
-    Cookies can't be read once the browser is gone, so they're snapshotted while it runs.
+    Cookies can't be read once the browser is gone, so they're snapshotted while it runs
+    and handed to `on_cookies` whenever they change (so nothing is lost on a crash).
     """
     closed: list[bool] = []
     context.on("close", lambda _: closed.append(True))
     snapshot: list[dict] = []
     while not closed:
         try:
-            snapshot = context.cookies()
+            current = context.cookies()
         except Exception:
             break
+        if on_cookies and current != snapshot:
+            with contextlib.suppress(Exception):
+                on_cookies(current)
+        snapshot = current
         time.sleep(poll_seconds)
     return snapshot
+
+
+LOGIN_FIELDS = {
+    "site": "#SiteName",
+    "username": "#UserName",
+    "password": "#UserPwd",
+}
+
+
+def prefill_login(page: Page, settings: Settings) -> bool:
+    """Fill site/login/password from settings on the login form; focus the captcha box.
+
+    Returns True if the login form was found. Never touches the captcha.
+    """
+    try:
+        if not page.query_selector("#TextBoxPin"):
+            return False
+        values = {
+            "site": settings.site,
+            "username": settings.username,
+            "password": settings.password.get_secret_value() if settings.password else None,
+        }
+        for key, selector in LOGIN_FIELDS.items():
+            if values[key] and not page.input_value(selector):
+                page.fill(selector, values[key])
+        page.select_option("#ListSecurity", settings.security)
+        page.focus("#TextBoxPin")
+        return True
+    except Exception:  # page navigated away or form changed – the user can type by hand
+        return False
+
+
+def attach_login_prefill(context: BrowserContext, settings: Settings) -> None:
+    """Prefill the login form on every page load (also after a session expiry redirect)."""
+    if not (settings.site or settings.username or settings.password):
+        return
+
+    def watch(page: Page) -> None:
+        page.on("domcontentloaded", lambda p: prefill_login(p, settings))
+
+    for page in context.pages:
+        watch(page)
+    context.on("page", watch)

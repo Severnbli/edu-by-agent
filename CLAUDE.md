@@ -12,6 +12,7 @@ The repo has three layers, built in this order:
 
 ```
 CLAUDE.md
+TASKS.md                  # backlog for the next sessions
 pyproject.toml            # Python 3.10+ package
 Dockerfile, compose.yaml  # the only supported runtime
 edu                       # wrapper: ./edu <command>
@@ -21,6 +22,9 @@ src/edu_by/
   config.py               # settings from env / .env / flags
   http.py                 # shared httpx client: proxy, cookies, headers, retries
   session.py              # login via browser, import, check, keepalive
+  webforms.py             # WebForms form state, async postbacks, delta parsing
+  har.py                  # live HAR recorder, sanitizer, summary
+  direct_proxy.py         # interface-bound local HTTP proxy (direct mode)
   api/                    # one module per constructor area (pages, news, media, ...)
 knowledge/
   README.md               # index of what is known and how confident
@@ -45,7 +49,9 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu proxy check                # whether the login/constructor pages are reachable through the proxy
 ./edu proxy pac                  # PAC file routing *.edu.by via the proxy, for your own browser
 ./edu browse [URL]               # any *.edu.by in a desktop Chromium window via the proxy (other sites direct)
-./edu session login              # browser window: log in, solve captcha, press Enter -> session saved
+./edu browse --har NAME          # same, recording edu.by traffic live to .session/har/NAME.*
+./edu har summary .session/har/NAME.sanitized.jsonl   # request shapes (read only sanitized files)
+./edu session login              # browser window prefilled from .env: solve captcha, click login -> session saved, window closes
 ./edu session import             # paste a Cookie header copied from DevTools instead
 ./edu session check              # exit 0 valid, 2 expired
 ./edu session keepalive          # ping every 45 min so the 1 h idle timeout never hits
@@ -57,7 +63,7 @@ The browser is the **Chromium bundled in the image** (from the Playwright base i
 
 ## Auth facts (do not try to automate around these)
 
-- Login is protected by a **captcha**. Never try to solve, bypass or farm it. A human solves it once in a real browser window (`./edu session login` opens one through Playwright, using the configured proxy).
+- Login is protected by a **captcha**. Never try to solve, bypass or farm it. Site, login and password can be prefilled from `EDU_SITE`, `EDU_USERNAME`, `EDU_PASSWORD` (optional `EDU_SECURITY`) – the human only types the captcha. `EDU_PASSWORD` is a secret: never print, log or commit it. A human solves it once in a real browser window (`./edu session login` opens one through Playwright, using the configured proxy).
 - The session **expires after ~1 hour without activity**. `keepalive` sends a cheap authenticated request on an interval below that (default 45 min). Every command checks the session first and tells the user to log in again on expiry, not retry blindly.
 - The session cookie is stored in `.session/` (git-ignored, file mode 600). Never print full cookie values in logs, output, commits or knowledge files – mask all but the last 4 characters.
 
@@ -86,6 +92,8 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Working rules
 
+- **Never read raw captures** (`*.raw.jsonl`) – only `*.sanitized.*`. Before relying on a new sanitized capture, check that no cookie values or `GuidSession` UUIDs from the raw one remain.
+- Never put real tokens, cookies or `GuidSession` values from captures into tests or docs – use made-up values.
 - **Never invent endpoints or parameters.** Everything in `knowledge/` and `api/` must come from observed traffic (HAR from DevTools, mitmproxy) or a real response. Mark anything unverified as `status: unverified` in the file's frontmatter.
 - When you discover new behavior, update `knowledge/` in the same change as the code that uses it, and cite the capture in `knowledge/captures/`. Strip cookies, tokens, CSRF values and personal data from captures before saving.
 - These are **live public school websites**. Read-only requests are fine. Before anything that publishes, deletes, overwrites or changes menus/permissions, show the user what will change and get confirmation – unless the skill they invoked says otherwise. Prefer a draft/unpublished state when the constructor offers one.
@@ -107,4 +115,5 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Status
 
-Done: Docker runtime, `session`, `proxy` (direct mode + Shadowsocks) and `browse` commands, `edu-session` skill. Verified: login page and desktop browser reachable in direct mode. Next: HAR captures of login and typical constructor actions to verify `knowledge/auth.md` and start `knowledge/endpoints/`.
+Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill. The first capture is mapped in `knowledge/`.
+**Next work is listed in [`TASKS.md`](TASKS.md)** – start there, and update it as you finish tasks.
