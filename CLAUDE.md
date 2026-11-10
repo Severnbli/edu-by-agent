@@ -25,7 +25,11 @@ src/edu_by/
   webforms.py             # WebForms form state, async postbacks, delta parsing
   har.py                  # live HAR recorder, sanitizer, summary
   direct_proxy.py         # interface-bound local HTTP proxy (direct mode)
-  api/                    # one module per constructor area: explorer (tree, lists, types), objects, treecache (section paths)
+  site.py                 # Site: one logged-in site (client, session check, explorer, path cache, lock) – shared by CLI and MCP
+  api/                    # one module per constructor area:
+                          #   reads: explorer (tree, lists, types), objects, treecache (section paths)
+                          #   planned writes: changes (Change, token), dialogs, objects_write, sections, trash
+docs/mcp.md               # MCP server design (task 5)
 knowledge/
   README.md               # index of what is known and how confident
   auth.md                 # login, captcha, cookies, expiry
@@ -55,6 +59,9 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu session import             # paste a Cookie header copied from DevTools instead
 ./edu session check              # exit 0 valid, 2 expired
 ./edu session keepalive          # ping every 45 min so the 1 h idle timeout never hits
+./edu tree | objects SEC | types # reads; `edu object show ID`, `edu section show SEC`, `edu trash list TYPE`
+./edu object set ID --set name=… # writes preview by default; --yes applies, delete level needs --token
+./edu section add PARENT --title …   (also object add|copy|move|sort|upload|trash, section set|move|delete, trash restore|purge)
 ./edu test                       # pytest
 ./edu lint | fmt                 # ruff check / fix + format
 ```
@@ -98,6 +105,7 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 - When you discover new behavior, update `knowledge/` in the same change as the code that uses it, and cite the capture in `knowledge/captures/`. Strip cookies, tokens, CSRF values and personal data from captures before saving.
 - These are **live public school websites**. Read-only requests are fine. Before anything that publishes, deletes, overwrites or changes menus/permissions, show the user what will change and get confirmation – unless the skill they invoked says otherwise. Prefer a draft/unpublished state when the constructor offers one.
 - Be gentle with the server: no parallel bulk requests, small delay between write calls, respect any rate limits seen.
+- **Every write goes through a plan** (`edu_by.api.changes.Change`): plan functions only read and return before/after values and a token; `apply()` writes, then re-reads to verify. Don't add a write that skips this – the CLI and the MCP server both rely on it for the confirmation step.
 - Skills call the `edu` CLI (or the `edu_by` package). They don't hand-write curl with cookies. If a skill needs something the CLI lacks, add it to the CLI first.
 - Each skill's `SKILL.md`: when to use it, required inputs, exact commands, how to verify the result, and what to do on common errors (expired session, validation error).
 
@@ -115,5 +123,5 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Status
 
-Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | object | types`. The first capture is mapped in `knowledge/`.
+Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | types`, shared `Site`, planned writes in `api/` with CLI commands (previews live-tested, apply not yet), MCP SDK in the image. Captures are mapped in `knowledge/`.
 **Next work is listed in [`TASKS.md`](TASKS.md)** – start there, and update it as you finish tasks.

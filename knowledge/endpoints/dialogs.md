@@ -34,8 +34,9 @@ Save (verified 2026-11-10): POST with `ctl00$ButtonSave` or `ctl00$ButtonSaveExi
 Two trees: «Исходный классификатор» (source, `ctl00$Main$TreeViewSource`) and «Принимающий классификатор» (target, `ctl00$Main$TreeClassifier`). Steps:
 
 1. GET the dialog.
-2. Select the target node: async postback `__EVENTTARGET = ctl00$Main$TreeClassifier`, `__EVENTARGUMENT = s<path>` – **note the prefix is `s`, not `sNodeClassifier`**, e.g. `s1001\56621` or `s1001\56621\59631`. Selecting a node expands it (lazy, like explorer).
-3. Place the section relative to it: async postback with `__EVENTTARGET` =
+2. Select the target node: async postback, `ctl00$ScriptManagerDialog = ctl00$Main$UpdatePanel1|ctl00$Main$TreeClassifier`, `__EVENTTARGET = ctl00$Main$TreeClassifier`, `__EVENTARGUMENT = s<path>` – **note the prefix is `s`, not `sNodeClassifier`**, e.g. `s1001\56621` or `s1001\56621\59631`. Selecting a node expands it (lazy, like explorer).
+   The dialog's tree links are `__doPostBack('ctl00$Main$TreeClassifier','s1001\\1041')` (read-only GET 2026-11-10: the first level of the root is rendered, deeper levels after selecting the parent).
+3. Place the section relative to it: async postback (`ctl00$ScriptManagerDialog = ctl00$Main$UpdatePanel1|<target>`) with `__EVENTTARGET` =
    - `ctl00$Main$MoveUp` – «Выше выбранного» (above the selected, same parent)
    - `ctl00$Main$MoveRight` – «Правее выбранного» (inside the selected, as a child)
    - `ctl00$Main$MoveDown` – «Ниже выбранного» (below the selected, same parent)
@@ -92,7 +93,7 @@ Used by «Переместить объекты». Select a node (`__EVENTTARGET
 
 ## ObjectsSort.aspx?guid=<section id> – sort objects (verified 2026-11-10)
 
-GET lists the section's objects; POST `ctl00$Main$HiddenFieldForSave = <id>;<id>;…;` (new order, trailing `;`) + `ctl00$ButtonSaveExit`. Reply `Result_Status = SaveExit`; then explorer postback `ButtonObjectSort`.
+GET lists the section's objects in their current order as `<div id='SortList'><span guid='<id>'>…</span>…</div>` (read-only GET 2026-11-10). `ctl00$Main$HiddenFieldForSave` is **empty** on GET – the page's `Save()` fills it from `#SortList` just before posting; POST `ctl00$Main$HiddenFieldForSave = <id>;<id>;…;` (new order, trailing `;`) + `ctl00$ButtonSaveExit`. Reply `Result_Status = SaveExit`; then explorer postback `ButtonObjectSort`.
 
 ## G_RengerProvider/Templates.aspx?guid=<template id> – page templates
 
