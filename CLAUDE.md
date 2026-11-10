@@ -25,7 +25,7 @@ src/edu_by/
   webforms.py             # WebForms form state, async postbacks, delta parsing
   har.py                  # live HAR recorder, sanitizer, summary
   direct_proxy.py         # interface-bound local HTTP proxy (direct mode)
-  api/                    # one module per constructor area: explorer (tree, lists, types), objects
+  api/                    # one module per constructor area: explorer (tree, lists, types), objects, treecache (section paths)
 knowledge/
   README.md               # index of what is known and how confident
   auth.md                 # login, captcha, cookies, expiry

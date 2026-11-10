@@ -22,7 +22,8 @@ Do **not** save page templates (G_RengerProvider/Templates.aspx) in captures: sa
 `src/edu_by/api/explorer.py` (tree, sections, object list with paging, types) and `api/objects.py` (ObjectEditor read); CLI `edu tree [--root ID] [--depth N | --all]`, `edu objects <section>`, `edu object <id>`, `edu types`, all with `--json`. Progress goes to stderr (`EDU_VERBOSE=1` when not a TTY). Learned: the tree is lazy (one request per section to list it all), selecting a hidden or the current node gives `error|500|`; see `knowledge/endpoints/explorer.md`.
 
 Follow-ups:
-- [ ] Cache the section tree in `.session/tree.json` (with a timestamp) so `edu objects <id>` for a deep section needn't walk the tree each time; `--refresh` to rebuild.
+- [x] Section path cache `.session/tree-<site>.json` (`api/treecache.py`): every explorer command adds what it saw; a cached bare ID costs one request per ancestor; a stale path falls back to the walk and is dropped.
+- [ ] Seed the cache fast from the public «Карта сайта» (`/ru/main.aspx?guid=1091` on the public host: nested `<ul class="level_N">`, one GET ~1.3 s, published sections only – hidden ones such as «Служебный» still need the walk). The admin tree has no lightweight child callback (each selection re-renders the ~110 KB tree panel).
 - [ ] `edu objects --type` / `--search` (the list has a title/content search: `ctl00$Main_Right$SS_text`, `SS_Button`, `SS_Button2` – not captured yet).
 - [ ] Trash views (`sNodeTrashe\<group>\<id+1>`) and object-type views (`sNodeTemplate…`) as object lists.
 

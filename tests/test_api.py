@@ -1,5 +1,7 @@
 """Parsers of the read-only API layer. Fixtures mirror the live markup with made-up data."""
 
+import pytest
+
 from edu_by.api.explorer import (
     SECTION,
     TEMPLATE,
@@ -176,3 +178,32 @@ def test_parse_object_editor_unpublished():
         'name="ctl00$Main$CheckBoxStatusObject"',
     )
     assert parse_object_editor("1063", html).published is False
+
+
+def test_treecache_roundtrip_and_stale_path(tmp_path):
+    from edu_by.api import treecache
+    from edu_by.api.explorer import ExplorerError, Section
+    from edu_by.config import Settings
+
+    s = Settings(session_dir=tmp_path, site="sch1.example.edu.by")
+    page = WebFormPage(client=None, url="https://wp.example.edu.by/explorer.aspx")  # type: ignore[arg-type]
+    page.fields["ctl00$Main_Left$GUID_CLASSIFIER"] = "1001"
+    ex = Explorer(page)
+    ex._learn(TREE)
+    treecache.save(s, ex)
+    assert treecache.cache_file(s).name == "tree-sch1.example.edu.by.json"
+    cached = treecache.load(s)
+    assert cached["1051"].path == ["1001", "1051"] and cached["1051"].parent_id == "1001"
+
+    # A cached path is followed instead of walking; a dead one is marked stale.
+    ex2 = Explorer(page)
+    ex2._learn(TREE)
+    ex2.cached = {"9999": Section("9999", "gone", "1001", ["1001", "9999"])}
+    calls = []
+    ex2.find_path = lambda path: calls.append(path) or (_ for _ in ()).throw(ExplorerError("x"))  # type: ignore[method-assign]
+    ex2.walk = lambda *a, **k: iter(())  # type: ignore[method-assign]
+    with pytest.raises(ExplorerError):
+        ex2.find_section("9999")
+    assert calls == [["1001", "9999"]] and ex2.stale == {"9999"}
+    treecache.save(s, ex2)
+    assert "9999" not in treecache.load(s)
