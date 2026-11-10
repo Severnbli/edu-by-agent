@@ -51,7 +51,10 @@ Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (33
 - [x] full design export via «Экспорт в архив» (2026-11-10, user-approved): `.session/design/export/download_-888.zip`, decoded to `decoded/` (format in design.md)
 - [ ] consider applying the redesign through «Импорт из архива» (new prefixed items) instead of editing live ones – needs a test on a copy
 - [ ] user approves the prototype (or asks for changes)
-- [ ] capture with the user: create a style set and attach it to a template (CssPacked / Templates save), on a test copy if possible
+- [x] capture: create / copy / delete / save a style set and a script, save a module and a template with `HiddenFieldForSave` – all in design-2026-11-10 (design.md)
+- [x] feasibility of the redesign prototype (2026-11-10): templates are free HTML, every module's output markup is in its settings (menus, news lists, breadcrumbs, languages – design.md «Module output markup»), so the layout is reachable; web fonts can't be uploaded (external or system font); the site has ru / be only
+- [ ] test on an unpublished HTML block in a test section whether a direct POST keeps `<style>`, `<svg>`, `<button>`, `data-*` (server-side cleaning unknown)
+- [ ] CLI / MCP: plan-based writes for style sets, scripts and module settings (`Controls.aspx` `ASD_*`), template body; never post `HiddenFieldForSave` from the GET
 - [ ] apply, ClearCache, check public pages and low-vision mode; rollback plan ready
 
 ## 6. Open questions (small, any time)
