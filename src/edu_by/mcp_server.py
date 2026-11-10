@@ -471,7 +471,8 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
         "edu_section_update",
         "Edit a section",
         _write("publish"),
-        "Change a section's title, internal name, tags or protection from deletion." + CONTRACT,
+        "Change a section's title, internal name, tags, protection from deletion or page "
+        "template (`template`: a «Обычный» template id, `0` = inherit)." + CONTRACT,
     )
     async def edu_section_update(
         section: str,
@@ -479,13 +480,14 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
         name: str | None = None,
         protected: bool | None = None,
         tags: str | None = None,
+        template: str | None = None,
         confirm_token: str | None = None,
     ) -> dict:
         from edu_by.api import sections
 
         def f(site) -> dict:
             sec = site.explorer().find_section(section)
-            change = sections.plan_update(site, sec.id, title, name, protected, tags)
+            change = sections.plan_update(site, sec.id, title, name, protected, tags, template)
             return _plan_or_apply(change, confirm_token)
 
         return await run(f)

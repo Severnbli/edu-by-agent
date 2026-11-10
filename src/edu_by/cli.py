@@ -833,17 +833,20 @@ def section_set(
     protect: Annotated[
         bool | None, typer.Option("--protect/--unprotect", help="Protection from deletion.")
     ] = None,
+    template: Annotated[
+        str | None, typer.Option(help="Page template id («Обычный»), 0 = inherit.")
+    ] = None,
     yes: YesOpt = False,
     token: TokenOpt = None,
     as_json: JsonOpt = False,
     proxy: ProxyOpt = None,
 ) -> None:
-    """Change a section's title, internal name, tags or delete protection."""
+    """Change a section's title, internal name, tags, delete protection or page template."""
     from edu_by.api import sections
 
     with _site(proxy) as site:
         sec = site.explorer().find_section(section)
-        change = sections.plan_update(site, sec.id, title, name, protect, tags)
+        change = sections.plan_update(site, sec.id, title, name, protect, tags, template)
         _run(site, change, yes, token, as_json)
 
 

@@ -49,7 +49,7 @@ Write tools – one per planned write, all with the same contract:
 | `edu_object_upload_image(id, path)` | `plan_upload_image` | edit / publish – `path` must be inside the repo (bind mount); refuse others |
 | `edu_object_trash(ids)` | `plan_trash` | delete |
 | `edu_section_add(parent, title, protected=true)` | `sections.plan_add` | publish |
-| `edu_section_update(section, title?, name?, protected?, tags?)` | `sections.plan_update` | edit / publish |
+| `edu_section_update(section, title?, name?, protected?, tags?, template?)` | `sections.plan_update` | edit / publish |
 | `edu_section_move(section, target, position)` | `sections.plan_move` | publish |
 | `edu_section_delete(section)` | `sections.plan_delete` | delete |
 | `edu_trash_restore(type_id, ids, section)` | `trash.plan_restore` | edit |

@@ -30,7 +30,7 @@ Items are links calling `Open('<dialog>', this, '<id>')`, which opens `/G_Renger
 
 ## Style sets – CssPacked.aspx?guid=<id>
 
-Form: `ctl00$Title_1 = [<id>] Редактирование набора стилей` (editing a style set), CSS text in `ctl00$Main$TextBoxBody`. Public pages link the sets a template uses, in order: `<link href='css.aspx?guid=<id>' rel='stylesheet' data-name='<set name>'/>`. Saving a set is **not captured yet**.
+Form: `ctl00$Title_1 = [<id>] Редактирование набора стилей` (editing a style set), CSS text in `ctl00$Main$TextBoxBody`. Public pages link the sets a template uses, in order: `<link href='css.aspx?guid=<id>' rel='stylesheet' data-name='<set name>'/>`. Save: see the next section (captured in design-2026-11-10).
 
 Templates attach scripts through `ctl00$Main$HiddenFieldForSave` (`<js value="<id>"/>` list, see dialogs.md). How a template chooses its style sets is not known yet.
 
@@ -41,7 +41,41 @@ On the category page (`RengerProvider.aspx?guid=CssPacked&gs=…` or `?guid=Java
 - `ctl00$ContentSecondMenu$CSSCopy` / `JSCopy` + `ctl00$Result_Value = <id>` – copy that item (1292 → 1302, 1293 → 1303);
 - `ctl00$ContentSecondMenu$CSSDel` / `JSDel` + `ctl00$Result_Value = <id>` – delete it.
 
-The item editor (`G_RengerProvider/CssPacked.aspx?guid=<id>`, `JavaScript.aspx?guid=<id>`) saves its text in `ctl00$Main$TextBoxBody` and name in `ctl00$Main$TextBoxName_text` with the usual `ctl00$ButtonSave` / `ButtonSaveExit`.
+The item editor (`G_RengerProvider/CssPacked.aspx?guid=<id>`, `JavaScript.aspx?guid=<id>`) saves its text in `ctl00$Main$TextBoxBody` and name in `ctl00$Main$TextBoxName_text` with the usual `ctl00$ButtonSave` («Сохранить и остаться», save and stay) / `ButtonSaveExit`. Async postback: `ctl00$ScriptManagerDialog = ctl00$ScriptManagerDialog|ctl00$ButtonSave`, plus `ctl00$Title_1`, `ctl00$Title_2`, `ctl00$Main$TextBoxName_warning_ClientState` (empty), `ctl00$GuidSession`, empty `ctl00$Result_*`. Captured for CSS 1002 and JS 1023 (design-2026-11-10). The same capture also has saves of `Controls.aspx` (2971) and `Templates.aspx` (1064, with a filled `HiddenFieldForSave`), so every design item can be written.
+
+## Module output markup (verified from the export and the backup, 2026-11-10)
+
+Modules don't have fixed HTML: each one keeps its markup in its settings. `Controls.aspx` shows every setting as a field `ctl00$Main$ASD_<setting>`, plus `ctl00$Main$Text_Before` / `Text_After` (HTML around the module). The settings seen:
+
+| Module (`fk`) | Markup settings | Placeholders |
+|---|---|---|
+| `WJG.Core_NavigationUniversal` (main menu 2601, section menu 2791, breadcrumbs 2801, page title 2491/2811, site map 3011) | `BlockStart`, `BlockEnd`, `m_BlockStart` / `m_BlockEnd` (per level, e.g. `<ul class="[[class]]">`), `m_ItemStart` / `m_ItemEnd`, `m_a` (link), `m_select` (current item); what it lists: `Status`, `D_Status`, `D_ClassifierList`, `D_Level` (depth), `D_Parent` | `[[url]]`, `[[title]]`, `[[class]]`, `[[guid]]` |
+| `WJG.Core_MenuEasy`, `MenuEasy2` (old menus) | `ASD_LinkStyle`, `ASD_LinkSpan`, `ASD_Separator`, `ASD_ClassFirst` / `Link`, `LinkSelect`, `BlockStart`, `BlockEnd` | `[[guid]]`, `[[title]]` |
+| `WJG.Core_ListObject` (lists of objects, e.g. 1021 the home HTML block, 1101 news) and `WJG.Core_ArxiwEasy` (archives, e.g. 3001 news) | `Format` – XSLT-like template of one item; `TemplateObjectList` / `TemplateObject` (object type), `ClassifierList`, paging `page_*` | `<%V(<field>)%>`, `<%WRITE(…)%>`, `<%G_OBJ%>` (object id), `WJG:FormatDate(<%V(dt)%>,'ShortDate')`, `<xsl:attribute>` |
+| `WJG.Core_Lang` (2551 on this site) | `Lang_<n>` (code), `LangNo_<n>` / `LangYes_<n>` (HTML of a not-chosen / chosen language) | – |
+| `WJG.Core_Way` (1071) | `BlockStart`, `Separator`, `ShowActiveClassifier` | – |
+| `WJG.Core_Tab` (tabs, e.g. 2711) | `Theme`, `ThemeUser`, `Str<n>` (tab title), `GuidControl<n>` (module in the tab) | – |
+| `WJG.Core_Head` (1611, «Данные в блок head») | `ASD_Str` (HTML put into `<head>`), `ASD_KeyWords` | – |
+
+`<{<id>}>` anywhere is a resource string (Localization item) – e.g. the cookie notice text is string 1498, its show / hide logic is in JS 1273.
+
+So a redesign can change the HTML of menus, news lists, breadcrumbs and the language switcher, not only their CSS. Template bodies (`Content<N>` in the export, `Body_Content$TextBoxRes` in the dialog) are free HTML with `LoadModule` / `<control>` references.
+
+## Fonts and files for a design
+
+Binaries of a design are images only (the export has gif / jpeg / png; uploads reject other types, see dialogs.md). Web fonts can't be uploaded: the platform serves only `/fonts/glyphicons/…` and `/fonts/fontawesome/…` (used by sets 1212 and 1272). A new font must come from an external host (`@import` in a style set or `<link>` in the Head module) or be replaced by a system font stack. The public site sends no `Content-Security-Policy` (header or meta; IIS 8.5, checked 2026-11-10) and `/fonts/` itself answers 403, so an external font host is not blocked. Font files inside an import archive – not tried.
+
+## HTML in content blocks
+
+The home block 1063 (type 524, saved through the editor) keeps `class` (`content`, `entry`, `pc`, `MsoBodyText`), `id` and 152 `style` attributes.
+
+**Direct save keeps everything (verified 2026-11-10, user-approved test):** an unpublished 524 block created by `edu object add --set text=@file` in a temporary section 59861 under 1011 stored this markup byte for byte – `<style>`, `<svg>`/`<path>`, `<button>`, `<details>`/`<summary>`, `<section>`, `<nav>`, `<aside>`, `<table>` with `<thead>`/`scope`, `class`, `id`, `style`, `data-*`, `aria-*`, `role`, `target`/`rel`, `loading`, and even `onclick` and `<script>`. The server does not clean HTML on save (`SystemWJG.asmx/ClearHtml` is not called). Test block 126743 purged, section deleted. **Public rendering verified the same day:** a published block in section 59871 is output byte for byte inside `<div class="html_block post">` (the list module's `Format`); in Chromium its `<style>` applies, the `<script>` runs, `<details>` and `<button>` work, and Golos Text loads from Google Fonts. A `<style>` in a block is page-wide, so scope it under a wrapper class.
+
+**Sections under 1011 «Служебный» have no page template** (`fk_Template` option `0` reads «-- Шаблон по умолчанию --», not «по иерархии (…)»): their public page is a 3.6 KB shell without content. To show such a section publicly, set its template (`edu section set <path> --template 1164`) – it then renders with the site's look but is in no menu (menus list 1001). Field `dop` of HTML blocks and news is labelled for scripts and iframes.
+
+## This site's live design (one site, 2026-11-10)
+
+Master 1144 «Загрузка от 25.08.2025. Основной мастер шаблон» (Главный 1154, Обычный 1164, 404 1174 use it) – CSS 1212–1282 (8 sets), JS 1203–1283 (9). Languages in module 2551: **ru and be only** (`<span>РУС</span>`, `<span>БЕЛ</span>`), no English version (`main.aspx?lang=en` and `?lang=be` return the same 141 994-byte page; the home block 1063 has only «Русский» among its languages). Adding `en` to the module is easy, but pages would be empty without translated content.
 
 ## Attaching CSS / JS to a template
 
