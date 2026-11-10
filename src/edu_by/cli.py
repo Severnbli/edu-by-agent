@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import getpass
+import json
 import sys
 import time
 from pathlib import Path
@@ -14,6 +16,7 @@ import typer
 from edu_by import session as sess
 from edu_by import shadowsocks
 from edu_by.config import Settings, get_settings, mask_proxy
+from edu_by.http import make_client
 
 app = typer.Typer(help="Operate the edu.by site constructor.", no_args_is_help=True)
 session_app = typer.Typer(
@@ -320,6 +323,165 @@ def har_summary(
         )
     for line in har_mod.summarize(path, include_static=static):
         typer.echo(line)
+
+
+# ---------- read-only site access ----------
+
+JsonOpt = Annotated[bool, typer.Option("--json", help="Print JSON instead of a table.")]
+
+
+@contextlib.contextmanager
+def _site(proxy: str | None):
+    """An authenticated client after a session check; exits 2 if the session expired."""
+    s = _settings(proxy)
+    if not _session_ok(s):
+        _fail("Session expired or missing. Run `./edu session login`, then retry.", 2)
+    try:
+        with make_client(s, cookies=sess.load_cookies(s)) as client:
+            yield s, client
+    except httpx.HTTPError as e:
+        _proxy_error(s, e)
+    except typer.Exit:
+        raise
+    except RuntimeError as e:  # ExplorerError, ObjectError, redirect to login
+        _fail(str(e))
+
+
+def _session_ok(s: Settings) -> bool:
+    try:
+        return sess.check(s).valid
+    except sess.SessionError:
+        return False
+    except httpx.HTTPError as e:
+        _proxy_error(s, e)
+        return False
+
+
+@contextlib.contextmanager
+def _explorer(s: Settings, client: httpx.Client):
+    """An explorer that knows section paths from `.session/tree-<site>.json` and adds to it."""
+    from edu_by.api import treecache
+    from edu_by.api.explorer import Explorer
+
+    ex = Explorer.open(client, s.constructor_url, delay=s.request_delay)
+    ex.cached = treecache.load(s)
+    if sys.stderr.isatty() or s.verbose:
+        ex.on_request = lambda n, what: typer.echo(f"[{n}] {what}", err=True)
+    try:
+        yield ex
+    finally:  # keep what was learned even if the command failed half-way
+        treecache.save(s, ex)
+
+
+def _print_json(data) -> None:
+    typer.echo(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+@app.command("tree")
+def tree(
+    root: Annotated[
+        str | None, typer.Option(help="Start from this section (ID or ID path 1001/1041).")
+    ] = None,
+    depth: Annotated[
+        int,
+        typer.Option(
+            help="Levels below the root(s) to list. Each listed level costs "
+            "one request (~1 s) per section above it."
+        ),
+    ] = 1,
+    all_levels: Annotated[
+        bool, typer.Option("--all", help="Walk the whole tree (one request per section).")
+    ] = False,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """List the site's sections (classifiers) as a tree."""
+    with _site(proxy) as (s, client), _explorer(s, client) as ex:
+        root_id = ex.find_section(root).id if root else None
+        found = list(ex.walk(root_id, None if all_levels else depth))
+    if as_json:
+        _print_json([sec.as_dict() for sec in found])
+        return
+    base = len(found[0].path) if found else 0
+    for sec in found:
+        typer.echo(f"{'  ' * (len(sec.path) - base)}{sec.id}  {sec.title}")
+
+
+@app.command("objects")
+def objects(
+    section: Annotated[
+        str,
+        typer.Argument(
+            help="Section ID (e.g. 1041) or ID path (1001/1041/1201, faster for "
+            "deep sections: an unseen bare ID is searched by walking the tree)."
+        ),
+    ],
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """List the objects (content items) of a section, all pages."""
+    from dataclasses import asdict
+
+    with _site(proxy) as (s, client), _explorer(s, client) as ex:
+        rows = ex.objects(section)
+    if as_json:
+        _print_json([asdict(r) for r in rows])
+        return
+    for r in rows:
+        mark = " " if r.published else "-"
+        typer.echo(f"{mark} {r.id:>8}  {r.type_label}: {r.title}")
+    typer.echo(f"{len(rows)} object(s); '-' = not published")
+
+
+@app.command("object")
+def object_(
+    object_id: Annotated[str, typer.Argument(help="Object ID, e.g. 1063.")],
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """Show one object: type, title, status, section and its HTML content."""
+    from dataclasses import asdict
+
+    from edu_by.api.objects import read_object
+
+    with _site(proxy) as (s, client):
+        obj = read_object(client, s.base_url, object_id)
+    if as_json:
+        _print_json(asdict(obj))
+        return
+    for key in (
+        "id",
+        "type",
+        "name",
+        "published",
+        "section_id",
+        "section_path",
+        "tags",
+        "languages",
+        "public_url",
+    ):
+        typer.echo(f"{key:>13}: {getattr(obj, key)}")
+    typer.echo("-- text --")
+    typer.echo(obj.text)
+    if obj.dop.strip():
+        typer.echo("-- dop --")
+        typer.echo(obj.dop)
+
+
+@app.command("types")
+def types(as_json: JsonOpt = False, proxy: ProxyOpt = None) -> None:
+    """List object types (templates) from the constructor tree."""
+    from dataclasses import asdict
+
+    from edu_by.api.explorer import types_from_tree
+
+    with _site(proxy) as (s, client), _explorer(s, client) as ex:
+        found = types_from_tree(ex.nodes())
+    if as_json:
+        _print_json([asdict(t) for t in found])
+        return
+    for t in found:
+        typer.echo(f"{t.id:>5}  {t.group:<12} {t.name}")
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ src/edu_by/
   webforms.py             # WebForms form state, async postbacks, delta parsing
   har.py                  # live HAR recorder, sanitizer, summary
   direct_proxy.py         # interface-bound local HTTP proxy (direct mode)
-  api/                    # one module per constructor area (pages, news, media, ...)
+  api/                    # one module per constructor area: explorer (tree, lists, types), objects, treecache (section paths)
 knowledge/
   README.md               # index of what is known and how confident
   auth.md                 # login, captcha, cookies, expiry
@@ -115,5 +115,5 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Status
 
-Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill. The first capture is mapped in `knowledge/`.
+Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | object | types`. The first capture is mapped in `knowledge/`.
 **Next work is listed in [`TASKS.md`](TASKS.md)** – start there, and update it as you finish tasks.

@@ -2,35 +2,34 @@
 
 Backlog for future sessions. Pick the top open task, keep work on `dev`, commit after each step, then update this file (tick the task, add what you learned to `knowledge/`). Read `CLAUDE.md` and `knowledge/README.md` first.
 
-Before any task that talks to the site: `./edu proxy up` (direct mode), then `./edu session check`. If the session is expired, ask the user to run `./edu session login` (site, login and password are prefilled from `.env`; they only solve the captcha). You can also start it yourself in the background and wait for it to finish.
+Before any task that talks to the site: `./edu proxy up` (direct mode; `EDU_INTERFACE` must name the uplink that is up – `wlo1` on Wi-Fi, `eno1` on cable), then `./edu session check`. If the session is expired, ask the user to run `./edu session login` (site, login and password are prefilled from `.env`; they only solve the captcha). You can also start it yourself in the background and wait for it to finish.
 
-## 1. Capture the missing write flows (needs the user)
+## 1. Capture the write flows – mostly done 2026-11-10
 
-Ask the user to run `./edu browse --har edit-<date>` and do, on a **test section**:
-- open an object (HTML block), change its text, Save (Сохранить и остаться) and Save and exit
-- publish and unpublish an object
-- create a news item (type 534) and fill its fields
-- upload an image (type 304) and a downloadable file (type 734) – `BinaryFrame.aspx`
-- move an object to trash and restore it; move an object to another section; sort objects
-- copy a section, move a section; change a section's template (`fk_Template`)
+Capture `edit-2026-11-10` documented in `knowledge/endpoints/dialogs.md` and `explorer.md`: section add / rename / protection / move (ClassifierMove: above, inside, below) / delete, object create (`N_Count`, new ids in `Result_Value_1`), object save (Save, SaveExit; news and image fields), copy, move to another section, sort, move to trash, ClearCache, page templates.
 
-Then: check the sanitized capture for leaks (no cookie values or GuidSession UUIDs from the raw file), summarize it with `./edu har summary`, and extend `knowledge/endpoints/*.md`. Done when every action in the "Not captured yet" list in `knowledge/README.md` is documented.
+Still missing – record a short second capture (`./edu browse --har edit2-<date>`) on a test section:
+- [x] publish and unpublish (capture publish-2026-11-10)
+- [x] image upload: tested by direct POSTs, limit ≈ 300 000 bytes, rejected files give no error (dialogs.md). Test section 59791 «Тест загрузки картинок (удалить)» under 1011 holds the test objects – delete it when done
+- [x] document upload (type 734): documents are not stored on the site – 734 / 594 are cards with a Yandex.Disk link (`format`, `size`, `url`); only images (≤ 300 KB) upload
+- [x] trash view, restore and permanent delete (verified on own test objects; the user allowed it 2026-11-10). Test section 59791 and its objects are deleted and purged
+- [ ] copy a section; change a section's template (`fk_Template`)
 
-## 2. Read-only API layer – `src/edu_by/api/`
+Do **not** save page templates (G_RengerProvider/Templates.aspx) in captures: saving rewrites the site-wide template even with no edits.
 
-Build on `edu_by.webforms.WebFormPage`. Never write.
-- `tree.py`: list sections as `{id, title, parent_id, path}` from explorer.aspx (`sNodeClassifier\...` links)
-- `objects.py`: list objects of a section (select the node via async postback, parse `#ListElements` rows: id, type label, title, published)
-- `object.py`: read one object via `G_Data/ObjectEditor.aspx?guid=` (name, text, dop, tags, status, languages)
-- `types.py`: object types from `G_Data/AddObject.aspx` (`gg` attributes)
-- Handle the quirk: selecting the already-current node returns an `error|500|` record – select another node first.
-- CLI: `edu tree`, `edu objects <section>`, `edu object <id>`, `edu types` (JSON output with `--json`)
-- Tests: parse saved HTML fixtures. Fixtures must be built from sanitized captures, with personal data replaced.
-Done when the commands work against the live site and their tests pass.
+## 2. Read-only API layer – done 2026-11-10
+
+`src/edu_by/api/explorer.py` (tree, sections, object list with paging, types) and `api/objects.py` (ObjectEditor read); CLI `edu tree [--root ID] [--depth N | --all]`, `edu objects <section>`, `edu object <id>`, `edu types`, all with `--json`. Progress goes to stderr (`EDU_VERBOSE=1` when not a TTY). Learned: the tree is lazy (one request per section to list it all), selecting a hidden or the current node gives `error|500|`; see `knowledge/endpoints/explorer.md`.
+
+Follow-ups:
+- [x] Section path cache `.session/tree-<site>.json` (`api/treecache.py`): every explorer command adds what it saw; a cached bare ID costs one request per ancestor; a stale path falls back to the walk and is dropped.
+- [ ] Seed the cache fast from the public «Карта сайта» (`/ru/main.aspx?guid=1091` on the public host: nested `<ul class="level_N">`, one GET ~1.3 s, published sections only – hidden ones such as «Служебный» still need the walk). The admin tree has no lightweight child callback (each selection re-renders the ~110 KB tree panel).
+- [ ] `edu objects --type` / `--search` (the list has a title/content search: `ctl00$Main_Right$SS_text`, `SS_Button`, `SS_Button2` – not captured yet).
+- [ ] Trash views (`sNodeTrashe\<group>\<id+1>`) and object-type views (`sNodeTemplate…`) as object lists.
 
 ## 3. Write operations with confirmation
 
-Only after task 1 has documented the flow. Each write command prints a dry-run of what changes and needs `--yes` (or an explicit confirmation from the user) to run:
+Section add/rename/move, object create, save text, copy, move, sort and trash are documented; publish and image upload are verified too. Each write command prints a dry-run of what changes and needs `--yes` (or an explicit confirmation from the user) to run:
 - `edu object set-text <id> --file content.html`
 - `edu object publish|unpublish <id>`
 - `edu object add <section> --type 534 --title ...`
@@ -45,12 +44,21 @@ One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sect
 
 `edu mcp` exposing the api/ functions as MCP tools, reusing the same code (no duplicated logic). Write tools keep the confirmation step.
 
+## 5a. Site design refresh (in progress)
+
+Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (338 items, `index.json`). Prototype: `.session/design/prototype/` (`modern.src.css` → `build.py` → `modern.css`, screenshots, `compare.html`). Plan: add the style as **one new style set** loaded last, so rollback = detach it. Next:
+- [x] full design export via «Экспорт в архив» (2026-11-10, user-approved): `.session/design/export/download_-888.zip`, decoded to `decoded/` (format in design.md)
+- [ ] consider applying the redesign through «Импорт из архива» (new prefixed items) instead of editing live ones – needs a test on a copy
+- [ ] user approves the prototype (or asks for changes)
+- [ ] capture with the user: create a style set and attach it to a template (CssPacked / Templates save), on a test copy if possible
+- [ ] apply, ClearCache, check public pages and low-vision mode; rollback plan ready
+
 ## 6. Open questions (small, any time)
 
 - [ ] Does `IsSession` or a GET of explorer.aspx reset the ~1 h idle timer? Keep one session idle >1 h and test; then fix `session keepalive` to use the cheapest request that works.
 - [ ] Does the security level change the idle timeout?
-- [ ] `ctl00$Main$CheckBoxStatusObject` – which state means published?
-- [ ] Why preview requests to the public site host failed during the first capture (the site itself is reachable).
+- [x] `ctl00$Main$CheckBoxStatusObject` («Разрешить публикацию»): checked = published (2026-11-10)
+- [x] Preview requests to the public host: Chromium with the PAC times out there, httpx works; route edu.by through httpx (design.md)
 - [ ] Language variants: field names for other languages (`title_<lang>`), `ClassifierLang.aspx`.
 
 ## Done
@@ -60,3 +68,4 @@ One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sect
 - [x] `browse` desktop Chromium, live HAR recording and sanitizer, `har summary`
 - [x] First capture mapped: login, data model, explorer postbacks, dialogs, SystemWJG (`knowledge/`)
 - [x] Security level investigated (Hight / Medium / Low), default Hight
+- [x] Read-only API and CLI: tree, objects, object, types (task 2)
