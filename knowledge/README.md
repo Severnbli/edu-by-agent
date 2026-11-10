@@ -26,4 +26,4 @@ Raw and sanitized captures live in `.session/har/` (git-ignored). Excerpts copie
 
 There is no «copy section» action in the explorer toolbar (only add, move, delete sections).
 
-Saving a section's template (`fk_Template`; field and options known), design import from archive, the two analysers, menu changes, server-side HTML cleaning on a direct save (design.md).
+Saving a section's template (`fk_Template`; field and options known), design import from archive, the two analysers, menu changes, public rendering of non-trivial HTML blocks (design.md).

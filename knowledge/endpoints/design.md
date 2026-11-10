@@ -67,7 +67,9 @@ Binaries of a design are images only (the export has gif / jpeg / png; uploads r
 
 ## HTML in content blocks
 
-The home block 1063 (type 524, saved through the editor) keeps `class` (`content`, `entry`, `pc`, `MsoBodyText`), `id` and 152 `style` attributes, so the editor does not strip them. Whether the server cleans other markup (`<style>`, `<svg>`, `<button>`, `data-*`) on a direct POST is **not tested**; `SystemWJG.asmx/ClearHtml` exists but nothing seen calls it on save. Field `dop` of HTML blocks and news is labelled for scripts and iframes.
+The home block 1063 (type 524, saved through the editor) keeps `class` (`content`, `entry`, `pc`, `MsoBodyText`), `id` and 152 `style` attributes.
+
+**Direct save keeps everything (verified 2026-11-10, user-approved test):** an unpublished 524 block created by `edu object add --set text=@file` in a temporary section 59861 under 1011 stored this markup byte for byte – `<style>`, `<svg>`/`<path>`, `<button>`, `<details>`/`<summary>`, `<section>`, `<nav>`, `<aside>`, `<table>` with `<thead>`/`scope`, `class`, `id`, `style`, `data-*`, `aria-*`, `role`, `target`/`rel`, `loading`, and even `onclick` and `<script>`. The server does not clean HTML on save (`SystemWJG.asmx/ClearHtml` is not called). Test block 126743 purged, section deleted. How the public page renders it through the list module (`Format` with `<%WRITE(<%V(text)%>)%>`) was not checked, because the block stayed unpublished. Field `dop` of HTML blocks and news is labelled for scripts and iframes.
 
 ## This site's live design (one site, 2026-11-10)
 
