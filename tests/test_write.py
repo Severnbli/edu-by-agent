@@ -167,3 +167,15 @@ def test_shrink_image_fits_the_limit(tmp_path):
     small = tmp_path / "s.png"
     Image.new("RGB", (10, 10)).save(small)
     assert ow.shrink_image(small, tmp_path / "out") == small
+
+
+def test_template_options() -> None:
+    from edu_by.api.sections import template_options
+
+    html = (
+        '<select name="ctl00$Main$fk_Template" id="ctl00_Main_fk_Template">\n'
+        '\t<option selected="selected" value="0">-- Шаблон по умолчанию --</option>\n'
+        '\t<option value="2001">Тестовый шаблон</option>\n</select>'
+    )
+    assert template_options(html) == {"0": "-- Шаблон по умолчанию --", "2001": "Тестовый шаблон"}
+    assert template_options("<form></form>") == {}

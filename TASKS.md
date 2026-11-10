@@ -54,7 +54,7 @@ Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (33
 - [x] capture: create / copy / delete / save a style set and a script, save a module and a template with `HiddenFieldForSave` – all in design-2026-11-10 (design.md)
 - [x] feasibility of the redesign prototype (2026-11-10): templates are free HTML, every module's output markup is in its settings (menus, news lists, breadcrumbs, languages – design.md «Module output markup»), so the layout is reachable; web fonts can't be uploaded (external or system font); the site has ru / be only
 - [x] direct POST of an HTML block keeps all markup, `<style>` / `<svg>` / `<script>` included (2026-11-10, test 126743 in 59861, cleaned up; design.md)
-- [ ] check the public rendering of such a block (published, in a hidden section) – the list module's XSLT may change it
+- [x] public rendering of such a block: byte for byte, CSS / JS / web font work (test page 59871 «Тест редизайна (удалить)» under 1011 with template 1164, block 126743 – **delete after the owner's verdict**)
 - [ ] prototypes: drop ENG (the site has ru / be only)
 - [ ] CLI / MCP: plan-based writes for style sets, scripts and module settings (`Controls.aspx` `ASD_*`), template body; never post `HiddenFieldForSave` from the GET
 - [ ] apply, ClearCache, check public pages and low-vision mode; rollback plan ready

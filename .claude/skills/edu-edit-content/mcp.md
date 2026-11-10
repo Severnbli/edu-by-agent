@@ -24,7 +24,7 @@ Locate the target first (prompt `edu_find_content`) and use **id paths** for sec
 ## Sections (menu pages)
 
 - `edu_section_add(parent, title, protected=true)`: appears in the menu at once.
-- `edu_section_update(section, title?, name?, protected?, tags?)`.
+- `edu_section_update(section, title?, name?, protected?, tags?, template?)` – `template` is a «Обычный» page template id offered by the section editor (`0` = inherit). Sections under 1011 «Служебный» have none and show an empty public page until one is set.
 - `edu_section_move(section, target, position=above|inside|below)`.
 - `edu_section_delete(section)`: the section itself can't be restored, its objects go to the trash. A protected section or one with subsections is refused. Unprotect it first with `edu_section_update(protected=false)`, as a separate confirmed change.
 - Root sections and page templates are not changed by these tools. A template save rewrites the template of the whole site.
