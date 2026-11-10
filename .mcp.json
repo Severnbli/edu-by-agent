@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "edu-by": {
+      "command": "./edu",
+      "args": ["mcp"]
+    }
+  }
+}

@@ -1,17 +1,6 @@
-# MCP server – design (task 5)
+# MCP server
 
-What `edu mcp` must be, so the implementation is mechanical. Everything it calls already exists in `edu_by.site` and `edu_by.api`; the server adds **no request logic** (CLAUDE.md).
-
-## Ready (2026-11-10)
-
-| Piece | Where | State |
-|---|---|---|
-| MCP SDK | `mcp>=1.9,<2` in `pyproject.toml`; 1.30.0 in the image | `from mcp.server.fastmcp import FastMCP` works |
-| stdio through Docker | `./edu` without a TTY runs `docker compose run --rm -T` | verified: stdin reaches the container, stdout carries only the program's output (compose messages go to stderr). A throwaway FastMCP server answered `initialize` and `tools/call` this way |
-| Shared runtime | `edu_by.site.Site` | settings, httpx client, session check, explorer page, section path cache, `lock` |
-| Reads | `api/explorer.py`, `api/objects.py`, `api/sections.read_section`, `api/trash.list_trash` | used by the CLI, live-tested |
-| Planned writes | `api/changes.py` + `api/objects_write.py`, `api/sections.py`, `api/trash.py` | previews and apply live-tested 2026-11-10 on test sections (since deleted) |
-| Request fakes for tests | `tests/test_write.py` (`httpx.MockTransport`, `fake_site`) | reuse for server tests |
+`edu mcp` (`src/edu_by/mcp_server.py`, stdio): the constructor's reads and planned writes as MCP tools, the skills' scenarios as prompts, `knowledge/` as resources. Everything it calls lives in `edu_by.site` and `edu_by.api`; the server adds **no request logic** (CLAUDE.md). Live-tested 2026-11-10 (section add, object create and update, section delete, purge on a test section, since deleted).
 
 ## Shape
 
@@ -76,11 +65,12 @@ Annotations: `destructiveHint: true` for delete-level tools, `idempotentHint: fa
 
 Not exposed: page templates (`Templates.aspx` saves rewrite the site-wide template), design import, security/permissions, «select all» in the trash, login.
 
-## Resources (optional)
+## Prompts and resources
 
-`knowledge/*.md` as resources (`edu://knowledge/<file>`), so an agent without the repo can read the constructor facts: documents are links, images ≤ 300 000 B, every save posts all fields.
+- **Prompts** are the skills' scenarios for MCP clients: each `.claude/skills/<name>/SKILL.md` (CLI commands, for agents in this repo) has a `mcp.md` beside it with the same steps in tool calls. Prompt name = skill name with `_` (`edu_publish_news`), description from the skill, optional argument `request` (the user's ask). `tests/test_mcp.py` checks that every skill has one and that it names only existing tools and prompts – change both files together.
+- **Resources**: `knowledge/**/*.md` as `edu://knowledge/<path>` (e.g. `edu://knowledge/endpoints/dialogs.md`).
 
 ## Tests
 
-- In-memory MCP client (`mcp.shared.memory.create_connected_server_and_client_session`) against the server with a `fake_site` from `tests/test_write.py`: tool list and annotations, a preview, an apply with the right token, a refused wrong token, `SessionExpired` mapped to a tool error.
-- Live smoke test with the owner's consent, on a test section under «Служебный» (1011), deleted afterwards (same as the CLI test of 2026-11-10).
+- `tests/test_mcp.py`: in-memory MCP client against the server with a `fake_site` from `tests/test_write.py` – tool list and annotations, a preview, an apply with the right token, a refused wrong token, `SessionExpired` mapped to a tool error, a file outside the repo refused, prompts and resources.
+- Live: a stdio client in the container (`mcp.client.stdio`, command `edu mcp`) on a test section under «Служебный» (1011), deleted afterwards.

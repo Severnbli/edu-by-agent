@@ -346,6 +346,17 @@ def browse(
         typer.echo(f"Recorded {recorder.count} request(s). Sanitized HAR: {out}")
 
 
+# ---------- mcp ----------
+
+
+@app.command("mcp")
+def mcp_command() -> None:
+    """Run the MCP server on stdio (for Claude Code: `.mcp.json`). Logs go to stderr."""
+    from edu_by.mcp_server import serve
+
+    serve()
+
+
 # ---------- har ----------
 
 
@@ -564,19 +575,12 @@ def object_show(
     proxy: ProxyOpt = None,
 ) -> None:
     """Show one object: type, title, status, section, HTML and its editable fields."""
-    from dataclasses import asdict
-
-    from edu_by.api import dialogs
-    from edu_by.api.objects import EDITOR_PATH, parse_object_editor
-    from edu_by.api.objects_write import editable_fields
+    from edu_by.api.objects_write import read_object_fields
 
     with _site(proxy) as site:
-        page = dialogs.open_dialog(site.client, site.base_url, EDITOR_PATH, object_id)
-        obj = parse_object_editor(object_id, page.html)
-        editable = editable_fields(page.fields)
-        values = {k: page.fields.get(f"ctl00$Main${k}", "").strip("\r\n") for k in editable}
+        data = read_object_fields(site, object_id)
     if as_json:
-        _print_json({**asdict(obj), "editable_fields": editable, "fields": values})
+        _print_json(data)
         return
     for key in (
         "id",
@@ -589,9 +593,9 @@ def object_show(
         "languages",
         "public_url",
     ):
-        typer.echo(f"{key:>13}: {getattr(obj, key)}")
-    typer.echo(f"{'editable':>13}: {', '.join(editable)}")
-    for k, v in values.items():
+        typer.echo(f"{key:>13}: {data[key]}")
+    typer.echo(f"{'editable':>13}: {', '.join(data['editable_fields'])}")
+    for k, v in data["fields"].items():
         if k == "Tags" or not v.strip():
             continue
         if "\n" in v or len(v) > 80:
