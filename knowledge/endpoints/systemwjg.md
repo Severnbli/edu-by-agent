@@ -1,6 +1,6 @@
 ---
 status: partially verified
-updated: 2026-11-09
+updated: 2026-11-10
 source: /SystemWJG.asmx/js (generated client), capture constructor-2026-11-09
 ---
 
@@ -13,7 +13,7 @@ ASP.NET AJAX web service. Call: `POST /SystemWJG.asmx/<Method>`, `Content-Type: 
 | `IsSession` | – | **verified**: `{"d": true}` when logged in. Used by `edu session check` |
 | `IsDelClassifier` | `guid` | **verified**: `""` if the section is delete-protected, else `"Подклассификаторов: N<br/>Объектов: M<br/>"` (N subsections, M objects) |
 | `ClearSession` | – | likely logout – don't call |
-| `ClearCache` | `url` | clears the public site cache for a URL |
+| `ClearCache` | `url` | **verified 2026-11-10**: body `{"url": "<site host>"}`, reply `{"d": "Cache сайта обновлен."}` (site cache refreshed) – clears the public site cache, harmless |
 | `ClearHtml` | `source` | probably sanitizes HTML |
 | `Name` | `SessionName` | unknown |
 | `NameObject`, `NameObjectShort` | `obj_name` | unknown |
@@ -23,4 +23,4 @@ ASP.NET AJAX web service. Call: `POST /SystemWJG.asmx/<Method>`, `Content-Type: 
 | `GetNewPinGraphics` | – | new captcha image |
 | `ListActiveSession`, `ListActiveSessionSendMessage(txt, ListUsers)`, `ListActiveSessionReadMessage`, `ListActiveSessionReadMessageOK` | | in-app messaging between active users |
 
-Only `IsSession` and `IsDelClassifier` were called so far. Treat everything else as unverified, and anything that may write as a write.
+Only `IsSession`, `IsDelClassifier` and `ClearCache` were called so far. Treat everything else as unverified, and anything that may write as a write.

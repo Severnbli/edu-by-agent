@@ -1,7 +1,7 @@
 ---
 status: verified
 updated: 2026-11-10
-source: capture constructor-2026-11-09 (#96–#1271), read-only replay of tree selection, live read-only probes 2026-11-10 (edu tree/objects/types)
+source: capture constructor-2026-11-09 (#96–#1271), capture edit-2026-11-10 (toolbar actions), read-only replay of tree selection, live read-only probes 2026-11-10 (edu tree/objects/types)
 ---
 
 # explorer.aspx – the main constructor window
@@ -39,17 +39,19 @@ ASP.NET WebForms page. Everything is a **postback** of the whole form to `/explo
 
 ## Toolbar actions (postback targets)
 
-Write actions – **never run without user confirmation** (see CLAUDE.md).
+Write actions – **never run without user confirmation** (see CLAUDE.md). Verified in capture edit-2026-11-10 unless marked. Button titles verbatim. All are async postbacks of the full explorer form; the current section is `ctl00$Main_Left$GUID_CLASSIFIER`. Selected objects are passed as `ctl00$Result_Value_2 = id|id|` (trailing `|`).
 
-| Action | `__EVENTTARGET` | Extra fields | Observed effect |
+| Action (title) | `__EVENTTARGET` | Extra fields | Effect |
 |---|---|---|---|
-| Add section | `ctl00$ContentMainMenu$MyButtonAddClassifier` | current `GUID_CLASSIFIER` = parent | creates child section (named `New`) immediately, then the UI opens ClassifierEditor |
-| Edit section (refresh after dialog) | `ctl00$ContentMainMenu$MyButtonEditClassifier` | | |
-| Delete section | `ctl00$ContentMainMenu$MyButtonDelClassifierAll` (sent as a submit button field `=Button`, no `__EVENTTARGET`) | | deletes current section; UI first calls `SystemWJG.IsDelClassifier` |
-| Copy section | `Classifier_Copy` button (target not captured yet) | | |
-| Move section | dialog `/G_Data/ClassifierMove.aspx?guid=` | | |
-| Add object (refresh after dialog) | `ctl00$ContentSecondMenu$ButtonObjectAdd` | | objects are created by AddObject.aspx |
-| Delete objects | `ctl00$ContentSecondMenu$ButtonObjectDel` | `ctl00$Result_Value_2 = id|id|` | in the capture: permanent delete (UI confirms twice). Note: in a section view this button's title is «Переместить в корзину» (move to trash) and its onclick is `Object_Trash(...)` – what it does depends on the view; capture before use |
-| Move to trash | `Object_Trash` button | `Result_Value_2 = id|id|` | not captured yet |
-| Move objects | dialog `/G_All/SelectClassifier.aspx`, then postback | `Result_Value_2 = ids`, `Result_Value_3 = target section` | not captured yet |
-| Sort objects | dialog `/G_Data/ObjectsSort.aspx?guid=` | | not captured yet |
+| Add section («Добавить новый») | `ctl00$ContentMainMenu$MyButtonAddClassifier` | current section = parent | creates a child section named `New` (delete-protected) **immediately**, then the UI opens ClassifierEditor on it; the reply's `GUID_CLASSIFIER` is the new id |
+| Refresh after editing a section («Изменить») | `ctl00$ContentMainMenu$MyButtonEditClassifier` | | after ClassifierEditor closes |
+| Move section («Переместить») | – | | dialog ClassifierMove.aspx (dialogs.md), then a GET of `/Explorer.aspx` |
+| Delete section («Удалить») | submit field `ctl00$ContentMainMenu$MyButtonDelClassifierAll = Button` (no `__EVENTTARGET`) | current section | UI first calls `SystemWJG.IsDelClassifier` and shows the counts; deletes the section, the current section becomes its parent. **Objects of a deleted section survive** with an empty `Classifier` (still readable by id) – probably in «Корзина объектов» (trash), not verified |
+| Copy section | `Classifier_Copy` button | | not captured |
+| Refresh after creating objects («Создать новый объект(ы)») | `ctl00$ContentSecondMenu$ButtonObjectAdd` | | objects are created by AddObject.aspx |
+| Refresh after saving an object | submit field `ctl00$ContentSecondMenu$ButtonRePage = Button` | `ctl00$Result_Value = <object id>` | after ObjectEditor saves |
+| Copy object («Создать копию») | `ctl00$ContentSecondMenu$ButtonObjectCopy` | `ctl00$Result_Value = <object id>` | new unpublished copy in the same section; the copy got an id from another range (126673 → 6573, 126663 → 6633) |
+| Move objects («Переместить объекты») | `ctl00$ContentSecondMenu$ButtonObjectMove` | `Result_Value_2 = id|`, `Result_Value_3 = <target section>` (from SelectClassifier.aspx) | object leaves the list |
+| Sort objects («Сортировать») | `ctl00$ContentSecondMenu$ButtonObjectSort` | | refresh after ObjectsSort.aspx saved the order |
+| Move to trash («Переместить в корзину») | `ctl00$ContentSecondMenu$ButtonObjectDel` | `Result_Value = <id>`, `Result_Value_2 = id|` | object leaves the list, still readable by id with an empty `Classifier`. In the first capture the same target was described as permanent delete (UI confirmed twice) – treat as destructive |
+| Restore from trash | | | not captured |
