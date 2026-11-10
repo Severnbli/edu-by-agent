@@ -1,7 +1,7 @@
 ---
 status: partially verified
 updated: 2026-11-10
-source: capture constructor-2026-11-09 (#1128–#1258), capture edit-2026-11-10 (#145–#2390), capture publish-2026-11-10 (#231–#340), upload probes 2026-11-10 (test section 59791), read-only GETs of the dialogs
+source: guarded browser walk-through 2026-11-10 (read-only), capture constructor-2026-11-09 (#1128–#1258), capture edit-2026-11-10 (#145–#2390), capture publish-2026-11-10 (#231–#340), upload probes 2026-11-10 (test section 59791), read-only GETs of the dialogs
 ---
 
 # Dialog pages (G_Data/*, G_All/*)
@@ -21,9 +21,11 @@ Fields (`ctl00$Main$…`):
 | `Name` | internal name (a new section is created as `New`) |
 | `title_ru`, `title_ru_status` (checkbox) | Russian title shown on the site, and whether it is enabled. Other languages likely `title_<lang>` (unverified) |
 | `IsDelete` (checkbox) | **protection from deletion**, on for a new section; `IsDelClassifier` returns `""` while it is on |
-| `fk_Template` (select) | page template, `0` = inherit from hierarchy; options e.g. 1024 Базовый шаблон. Changing it is not captured yet |
-| `StatusDirectLink` | `0` / `2` seen; meaning not known |
-| `Tags`, `SpecialClasifierAA` | not explored |
+| `fk_Template` (select) | «Шаблон» (page template): `0` = «-- Шаблон по иерархии (…) --» (inherit, the inherited name in brackets), else a «Обычный» template id (on the test site 1024 Базовый шаблон, 1164, 1114). A save posts the chosen id; not saved by us yet |
+| `StatusDirectLink` (radio) | «Редирект»: `0` «ничего не делать» (no redirect), `2` «переход на первый под-классификатор» (go to the first subsection), `3` «переход на специальный классификатор» (go to the section in `SpecialClasifierAA`) |
+| `SpecialClasifierAA` (hidden) | target section id for redirect `3`, picked with SelectClassifier |
+| icon | «Иконка для карты сайта и меню»: separate dialog `/G_All/Binary.aspx?guid=<section id>` – `ctl00$Main$FileUploadIco` + `ctl00$AddButton$ButtonSaveBinary` «Загрузить», `ctl00$AddButton$ButtonDelBinary` «Удалить»; full image `/sm_full.aspx?guid=<id>` |
+| `Tags` | «Теги:» |
 
 Save (verified 2026-11-10): POST with `ctl00$ButtonSave` or `ctl00$ButtonSaveExit`; reply `Result_Status = Save | SaveExit`. Unchecked checkboxes are simply absent from the POST (standard HTML), so turning protection off = leave `IsDelete` out. Then the UI refreshes with `MyButtonEditClassifier` (explorer.md). Security dialog: `/G_Security/Classifier.aspx?guid=`.
 
