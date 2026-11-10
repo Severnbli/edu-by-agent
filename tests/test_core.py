@@ -257,6 +257,39 @@ def test_browser_refuses_credentialed_proxy(tmp_path):
         pass
 
 
+def test_add_session_cookies_copies_the_saved_session(tmp_path):
+    from edu_by import session as sess
+    from edu_by.browser import add_session_cookies
+
+    s = make(tmp_path)
+    sess.save_cookies(
+        s,
+        [
+            {
+                "name": "ASP.NET_SessionId",
+                "value": "fake1234",
+                "domain": s.site_host,
+                "path": "/",
+                "expires": -1,
+                "secure": True,
+                "httpOnly": True,
+            },
+        ],
+    )
+
+    class Ctx:
+        added: list[dict] = []
+
+        def add_cookies(self, cookies):
+            self.added += cookies
+
+    ctx = Ctx()
+    assert add_session_cookies(ctx, s) == 1
+    (c,) = ctx.added
+    assert c["name"] == "ASP.NET_SessionId" and c["domain"] == s.site_host
+    assert "expires" not in c and c["httpOnly"] is True  # session cookie stays a session cookie
+
+
 def test_direct_proxy_refuses_non_edu_by():
     async def scenario():
         proxy = await direct_proxy.serve("127.0.0.1", 0, "lo")

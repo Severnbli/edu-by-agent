@@ -10,6 +10,8 @@ dependencies = [
     "typer>=0.12",
     "pydantic-settings>=2.3",
     "playwright>=1.45",
+    "mcp>=1.9,<2",  # MCP server (task 5): official Python SDK, FastMCP
+    "pillow>=10",  # shrink photos to the ~300 KB upload limit (`object upload --shrink`)
 ]
 
 [project.scripts]

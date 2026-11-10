@@ -27,22 +27,26 @@ Follow-ups:
 - [ ] `edu objects --type` / `--search` (the list has a title/content search: `ctl00$Main_Right$SS_text`, `SS_Button`, `SS_Button2` – not captured yet).
 - [ ] Trash views (`sNodeTrashe\<group>\<id+1>`) and object-type views (`sNodeTemplate…`) as object lists.
 
-## 3. Write operations with confirmation
+## 3. Write operations with confirmation – done 2026-11-10
 
-Section add/rename/move, object create, save text, copy, move, sort and trash are documented; publish and image upload are verified too. Each write command prints a dry-run of what changes and needs `--yes` (or an explicit confirmation from the user) to run:
-- `edu object set-text <id> --file content.html`
-- `edu object publish|unpublish <id>`
-- `edu object add <section> --type 534 --title ...`
-- `edu section add <parent> --title ...`
-Delete and trash commands come last, and need double confirmation. Re-read the object after each write to verify it.
+Planned writes in `api/` (`changes.Change`: plan reads only, returns before/after, level and a token; `apply()` writes and re-reads) and CLI commands: `edu object set|publish|unpublish|add|copy|move|sort|upload|trash`, `edu section add|set|move|delete`, `edu trash restore|purge` (+ reads `object show`, `section show`, `trash list`). Preview by default, `--yes` applies, delete level needs `--token` from the preview. Unit tests on a fake constructor (`tests/test_write.py`).
 
-## 4. Skills for agents – `.claude/skills/`
+- [x] **Live test of apply** (2026-11-10, owner's go-ahead): test section 59801 «Тест инструментов (удалить)» under 1011 with subsections 59811 / 59821 – every command applied and verified, then sections deleted and the 3 test objects purged. News test in 59831 «Тест новости (удалить)»: 534 with `dt_text`, `zag`, `name`, `txt`, picture upload, date change – verified, then deleted and purged.
+- [x] Fixed on the way: a text that is one bare `<p>…</p>` is stored without the tags (the check now accepts it); `object show` prints all editable field values; `objects --pages N`; `object upload --shrink` (Pillow).
+- [x] Confirmed: ClassifierMove buttons (checked by the new parent), `IsDelClassifier` counts, the news date `dt_text` without touching its `_ClientState`, `object copy` id by list diff (ids are reused: copy got 6713).
+- Left in the 524 / 304 trash: empty objects 126733, 126723 and others from earlier captures – not purged (not named by the owner).
 
-One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sections and objects), `edu-edit-content`, `edu-publish-news`, `edu-upload-file`. Each says when to use it, its inputs, exact commands, how to verify, and what to do on common errors.
+## 4. Skills for agents – done 2026-11-10
 
-## 5. MCP server
+`.claude/skills/`: `edu-session`, `edu-find-content` (read), `edu-edit-content` (text, publish, objects, sections, trash), `edu-publish-news` (news with photos as unpublished 304 objects in `txt`), `edu-upload-file` (images with `--shrink`, documents as 734 link cards). To do later: a design skill once task 5a has CLI commands (style sets, ClearCache) – design writes are site-wide and not exposed yet.
 
-`edu mcp` exposing the api/ functions as MCP tools, reusing the same code (no duplicated logic). Write tools keep the confirmation step.
+## 5. MCP server – ready to implement
+
+Design: [`docs/mcp.md`](docs/mcp.md) (tools, the preview/`confirm_token` contract, session handling, stdout rule, tests). Ready: `mcp` SDK 1.30 in the image, stdio through `./edu` verified with a throwaway FastMCP server, `Site` and all plan functions. To do:
+- [ ] `src/edu_by/mcp_server.py` + `edu mcp`, tools as in docs/mcp.md
+- [ ] tests with the in-memory MCP client and `fake_site`
+- [ ] `.mcp.json` for Claude Code; read tools allowed, write tools on "ask"
+- [ ] live smoke test (task 3's CLI test passed; repeat through the MCP tools)
 
 ## 5a. Site design refresh (in progress)
 
@@ -65,7 +69,7 @@ Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (33
 
 - [x] Repo setup, Docker runtime, `./edu` wrapper, proxy modes (direct over `wlo1`, Shadowsocks), proxy only for edu.by
 - [x] Session: captcha login with `.env` prefill, import, check (`IsSession`), keepalive
-- [x] `browse` desktop Chromium, live HAR recording and sanitizer, `har summary`
+- [x] `browse` desktop Chromium (saved session or prefilled login, `--login`), live HAR recording and sanitizer, `har summary`
 - [x] First capture mapped: login, data model, explorer postbacks, dialogs, SystemWJG (`knowledge/`)
 - [x] Security level investigated (Hight / Medium / Low), default Hight
 - [x] Read-only API and CLI: tree, objects, object, types (task 2)
