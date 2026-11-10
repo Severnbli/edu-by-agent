@@ -1,4 +1,4 @@
-# edu-by-mcp
+# edu-by-agent
 
 Tooling and knowledge that let agents operate the **edu.by site constructor** (the builder used to manage Belarusian education websites): create and edit pages, menus, news, documents and media through the same HTTP requests the constructor's web UI makes.
 
