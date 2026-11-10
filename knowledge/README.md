@@ -8,6 +8,7 @@ Facts about the edu.by site constructor, taken from real traffic only. Each file
 | [model.md](model.md) | sections (classifiers), objects, object types, ID suffix scheme | verified |
 | [endpoints/explorer.md](endpoints/explorer.md) | explorer.aspx postbacks, tree, object list, toolbar actions | verified |
 | [endpoints/dialogs.md](endpoints/dialogs.md) | ClassifierEditor, ClassifierMove, AddObject, ObjectEditor, SelectClassifier, ObjectsSort, Templates, upload frames | partially verified |
+| [endpoints/design.md](endpoints/design.md) | RengerProvider: templates, modules, style sets, scripts; low-vision mode | partially verified |
 | [endpoints/systemwjg.md](endpoints/systemwjg.md) | SystemWJG.asmx JSON methods | partially verified |
 
 ## Captures
