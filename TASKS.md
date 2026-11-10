@@ -9,9 +9,10 @@ Before any task that talks to the site: `./edu proxy up` (direct mode; `EDU_INTE
 Capture `edit-2026-11-10` documented in `knowledge/endpoints/dialogs.md` and `explorer.md`: section add / rename / protection / move (ClassifierMove: above, inside, below) / delete, object create (`N_Count`, new ids in `Result_Value_1`), object save (Save, SaveExit; news and image fields), copy, move to another section, sort, move to trash, ClearCache, page templates.
 
 Still missing – record a short second capture (`./edu browse --har edit2-<date>`) on a test section:
-- [ ] publish and unpublish: tick / untick «Разрешить публикацию» in an object and save
-- [ ] upload an image and a file: the browser's file picker sees only the repo, so put the files in `.session/upload/` first (git-ignored) and pick them from `/app/.session/upload/`
-- [ ] open «Корзина объектов» (trash) and restore an object
+- [x] publish and unpublish (capture publish-2026-11-10)
+- [x] image upload: tested by direct POSTs, limit ≈ 300 000 bytes, rejected files give no error (dialogs.md). Test section 59791 «Тест загрузки картинок (удалить)» under 1011 holds the test objects – delete it when done
+- [ ] document upload (type 734) and its limit
+- [ ] open «Корзина объектов» (trash) and restore an object (the user does trash work themselves – don't touch it without asking)
 - [ ] copy a section; change a section's template (`fk_Template`)
 
 Do **not** save page templates (G_RengerProvider/Templates.aspx) in captures: saving rewrites the site-wide template even with no edits.
@@ -27,7 +28,7 @@ Follow-ups:
 
 ## 3. Write operations with confirmation
 
-Section add/rename/move, object create, save text, copy, move, sort and trash are documented; publish and upload wait for the second capture. Each write command prints a dry-run of what changes and needs `--yes` (or an explicit confirmation from the user) to run:
+Section add/rename/move, object create, save text, copy, move, sort and trash are documented; publish and image upload are verified too. Each write command prints a dry-run of what changes and needs `--yes` (or an explicit confirmation from the user) to run:
 - `edu object set-text <id> --file content.html`
 - `edu object publish|unpublish <id>`
 - `edu object add <section> --type 534 --title ...`
