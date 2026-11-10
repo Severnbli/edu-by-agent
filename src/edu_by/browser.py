@@ -114,6 +114,33 @@ def run_until_closed(
     return snapshot
 
 
+def add_session_cookies(context: BrowserContext, settings: Settings) -> int:
+    """Put the saved session cookies (`.session/cookies.json`) into the browser, so it opens
+    logged in with the same session as the CLI. Returns how many were added."""
+    import json
+
+    path = settings.cookies_file
+    if not path.exists():
+        return 0
+    cookies = []
+    for c in json.loads(path.read_text()):
+        item = {
+            "name": c["name"],
+            "value": c["value"],
+            "domain": c.get("domain") or settings.site_host,
+            "path": c.get("path") or "/",
+        }
+        if isinstance(c.get("expires"), (int, float)) and c["expires"] > 0:
+            item["expires"] = c["expires"]
+        for flag in ("secure", "httpOnly"):
+            if c.get(flag) is not None:
+                item[flag] = bool(c[flag])
+        cookies.append(item)
+    if cookies:
+        context.add_cookies(cookies)
+    return len(cookies)
+
+
 LOGIN_FIELDS = {
     "site": "#SiteName",
     "username": "#UserName",

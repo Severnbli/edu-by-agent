@@ -146,3 +146,24 @@ def test_dialog_tree_select_reveals_ancestors():
     page.html = link("s1001") + link("s1001\\56621")
     tree_select(page, ["1001", "56621", "59631"], 0)
     assert sent == ["s1001\\56621", "s1001\\56621\\59631"]
+
+
+def test_stored_drops_one_bare_paragraph_only():
+    assert ow._stored("<p>Один абзац.</p>") == "Один абзац."
+    two = "<p>Первый.</p>\n<p>Второй.</p>"
+    assert ow._stored(two) == two
+    assert ow._stored('<p style="x">Стиль</p>') == '<p style="x">Стиль</p>'
+
+
+def test_shrink_image_fits_the_limit(tmp_path):
+    from PIL import Image
+
+    big = tmp_path / "photo.png"
+    Image.effect_noise((2400, 1800), 80).convert("RGB").save(big)
+    assert big.stat().st_size > ow.IMAGE_LIMIT
+    out = ow.shrink_image(big, tmp_path / "out")
+    assert out.suffix == ".jpg" and out.stat().st_size <= ow.IMAGE_LIMIT
+    assert max(Image.open(out).size) <= 1600
+    small = tmp_path / "s.png"
+    Image.new("RGB", (10, 10)).save(small)
+    assert ow.shrink_image(small, tmp_path / "out") == small

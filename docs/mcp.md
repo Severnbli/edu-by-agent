@@ -10,7 +10,7 @@ What `edu mcp` must be, so the implementation is mechanical. Everything it calls
 | stdio through Docker | `./edu` without a TTY runs `docker compose run --rm -T` | verified: stdin reaches the container, stdout carries only the program's output (compose messages go to stderr). A throwaway FastMCP server answered `initialize` and `tools/call` this way |
 | Shared runtime | `edu_by.site.Site` | settings, httpx client, session check, explorer page, section path cache, `lock` |
 | Reads | `api/explorer.py`, `api/objects.py`, `api/sections.read_section`, `api/trash.list_trash` | used by the CLI, live-tested |
-| Planned writes | `api/changes.py` + `api/objects_write.py`, `api/sections.py`, `api/trash.py` | previews live-tested read-only; **apply not yet tested on the live site** (needs the owner's go-ahead, see TASKS.md task 3) |
+| Planned writes | `api/changes.py` + `api/objects_write.py`, `api/sections.py`, `api/trash.py` | previews and apply live-tested 2026-11-10 on test sections (since deleted) |
 | Request fakes for tests | `tests/test_write.py` (`httpx.MockTransport`, `fake_site`) | reuse for server tests |
 
 ## Shape
@@ -83,4 +83,4 @@ Not exposed: page templates (`Templates.aspx` saves rewrite the site-wide templa
 ## Tests
 
 - In-memory MCP client (`mcp.shared.memory.create_connected_server_and_client_session`) against the server with a `fake_site` from `tests/test_write.py`: tool list and annotations, a preview, an apply with the right token, a refused wrong token, `SessionExpired` mapped to a tool error.
-- Live smoke test with the owner's consent, on a test section under «Служебный» (1011), deleted afterwards.
+- Live smoke test with the owner's consent, on a test section under «Служебный» (1011), deleted afterwards (same as the CLI test of 2026-11-10).

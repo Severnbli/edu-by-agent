@@ -52,7 +52,8 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu proxy down | logs
 ./edu proxy check                # whether the login/constructor pages are reachable through the proxy
 ./edu proxy pac                  # PAC file routing *.edu.by via the proxy, for your own browser
-./edu browse [URL]               # any *.edu.by in a desktop Chromium window via the proxy (other sites direct)
+./edu browse [URL]               # desktop Chromium via the proxy, logged in with the saved session (constructor), else the prefilled login form
+./edu browse --login             # login form prefilled from .env; the window stays open, the session is saved once logged in
 ./edu browse --har NAME          # same, recording edu.by traffic live to .session/har/NAME.*
 ./edu har summary .session/har/NAME.sanitized.jsonl   # request shapes (read only sanitized files)
 ./edu session login              # browser window prefilled from .env: solve captcha, click login -> session saved, window closes
@@ -61,6 +62,7 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu session keepalive          # ping every 45 min so the 1 h idle timeout never hits
 ./edu tree | objects SEC | types # reads; `edu object show ID`, `edu section show SEC`, `edu trash list TYPE`
 ./edu object set ID --set name=… # writes preview by default; --yes applies, delete level needs --token
+./edu object upload ID FILE --shrink   # image ≤ 300 KB (re-encoded as JPEG if bigger)
 ./edu section add PARENT --title …   (also object add|copy|move|sort|upload|trash, section set|move|delete, trash restore|purge)
 ./edu test                       # pytest
 ./edu lint | fmt                 # ruff check / fix + format
@@ -123,5 +125,5 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Status
 
-Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | types`, shared `Site`, planned writes in `api/` with CLI commands (previews live-tested, apply not yet), MCP SDK in the image. Captures are mapped in `knowledge/`.
+Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | types`, shared `Site`, planned writes in `api/` with CLI commands (all live-tested 2026-11-10), `browse` with the saved session, skills `edu-find-content`, `edu-edit-content`, `edu-publish-news`, `edu-upload-file`, MCP SDK in the image. Captures are mapped in `knowledge/`.
 **Next work is listed in [`TASKS.md`](TASKS.md)** – start there, and update it as you finish tasks.

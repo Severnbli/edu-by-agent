@@ -22,7 +22,7 @@ All commands run from the repo root through Docker: `./edu ...`.
 The captcha means **you can't log in yourself**. Ask the user to run one of these:
 
 - `! ./edu session login` – opens a browser with site/login/password prefilled from `.env` (`EDU_SITE`, `EDU_USERNAME`, `EDU_PASSWORD`); they solve the captcha and click Авторизация, the window closes by itself. You may also start it yourself in the background and wait.
-- `! ./edu browse` – same browser; cookies are saved when they close it.
+- `! ./edu browse --login` – the same prefilled login form, but the window stays open for their own work; the session is saved once the constructor opens.
 - `! ./edu session import` – paste a `Cookie` header from DevTools.
 
 Then run `edu session check` again.
@@ -34,4 +34,6 @@ The session dies after ~1 h idle. For long interactive work, suggest the user ke
 ## Rules
 
 - Never print cookie values or `ss://` links. `edu session check` already masks them.
-- Opening another `*.edu.by` site for the user: `./edu browse <url>`. Non-edu.by sites always go direct.
+- Opening the constructor for the user: `./edu browse` – a desktop Chromium with edu.by routed through the proxy, logged in with the saved session (same session as the CLI). If the session is expired it opens the prefilled login form instead.
+- Another `*.edu.by` page: `./edu browse <url>`. Non-edu.by sites always go direct.
+- For their own browser instead: `./edu proxy pac` prints a PAC file to set in the browser's proxy settings.

@@ -33,6 +33,17 @@ def _norm(v: str) -> str:
     return v.replace("\r\n", "\n").strip("\n")
 
 
+_ONE_PARAGRAPH = re.compile(r"^\s*<p>((?:(?!</?p[\s>]).)*)</p>\s*$", re.S)
+
+
+def _stored(v: str) -> str:
+    """The value as the server keeps it: a text that is one bare `<p>…</p>` loses the
+    paragraph tags (live 2026-11-10); several blocks are kept as sent."""
+    v = _norm(v)
+    m = _ONE_PARAGRAPH.match(v)
+    return m.group(1) if m else v
+
+
 def _label(obj: ObjectData) -> str:
     title = obj.name or "(без названия)"
     return f"object {obj.id} «{title[:60]}» ({obj.type}) in {obj.section_id} {obj.section_path}"
@@ -97,6 +108,8 @@ def plan_update(
         notes.append("publishes the object on the public site")
     if published is False and obj.published:
         notes.append("removes the object from the public site")
+    if any(_stored(v) != _norm(v) for v in values.values()):
+        notes.append("a text that is one <p>…</p> is stored without the <p> tags")
     if "dt_text" in values:
         notes.append("news date: format dd.mm.yyyy (the calendar state is not changed)")
 
@@ -119,7 +132,7 @@ def plan_update(
         mismatch = {
             k: _norm(fresh.fields.get(MAIN + k, ""))
             for k, v in values.items()
-            if _norm(fresh.fields.get(MAIN + k, "")) != _norm(v)
+            if _stored(fresh.fields.get(MAIN + k, "")) != _stored(v)
         }
         if published is not None and after.published != published:
             mismatch["published"] = after.published
@@ -365,6 +378,38 @@ def plan_sort(site: Site, section_id: str, order: list[str]) -> Change:
 def _thumbnail_type(site: Site, object_id: str) -> str:
     r = site.client.get(f"{site.base_url}/sm.aspx", params={"guid": object_id})
     return r.headers.get("content-type", "").split(";")[0]
+
+
+def shrink_image(file: Path, out_dir: Path, limit: int = IMAGE_LIMIT) -> Path:
+    """Re-encode a photo as JPEG small enough to upload (the server re-encodes to JPEG anyway).
+
+    Longest side at most 1600 px, quality stepped down until the file is under `limit`.
+    Returns `file` itself when it is already a small image.
+    """
+    from PIL import Image, ImageOps
+
+    if file.stat().st_size <= limit and mimetypes.guess_type(file.name)[0] in IMAGE_TYPES:
+        return file
+    try:
+        img = ImageOps.exif_transpose(Image.open(file))
+    except Exception as e:  # not an image Pillow can read
+        raise WriteError(f"{file.name}: can't read it as an image ({e})") from e
+    if img.mode not in ("RGB", "L"):
+        bg = Image.new("RGB", img.size, "white")
+        bg.paste(img.convert("RGBA"), mask=img.convert("RGBA").getchannel("A"))
+        img = bg
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / (file.stem + ".jpg")
+    side = 1600
+    while side >= 400:
+        im = img.copy()
+        im.thumbnail((side, side))
+        for quality in (85, 75, 65, 55):
+            im.save(out, "JPEG", quality=quality, optimize=True)
+            if out.stat().st_size <= limit:
+                return out
+        side = int(side * 0.8)
+    raise WriteError(f"{file.name}: could not shrink it under {limit} B")
 
 
 def plan_upload_image(site: Site, object_id: str, file: Path) -> Change:

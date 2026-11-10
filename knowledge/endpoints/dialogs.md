@@ -44,6 +44,8 @@ Two trees: «Исходный классификатор» (source, `ctl00$Main$
 
 So the same dialog both moves sections between parents and sorts sections.
 
+**Applied through the CLI (2026-11-10, test sections 59811 / 59821 under 59801):** `MoveUp` put 59821 above its sibling 59811, `MoveRight` made it a child of 59811. The reply has no `Result_Status`; the result is checked by reloading explorer.aspx and reading the new parent.
+
 ## AddObject.aspx?guid=<section id> – create objects (verified 2026-11-10)
 
 - Types: elements with `gg="<type id>"` (see model.md); the click handler copies `gg` into the hidden `ctl00$Main$SelType`.
@@ -72,6 +74,12 @@ Type-specific fields (labels verbatim):
 | 304 Графический объект (image) | `name` «Подпись» (caption), `text` «Комментарий» (comment); the file itself goes through BinaryFrame (below) |
 
 **Save (verified 2026-11-10):** async postback of the full form + `ctl00$ButtonSave` (stay) or `ctl00$ButtonSaveExit`. Reply: `Result_Status = Save | SaveExit` and a refreshed `ctl00$Main$HiddenTitleObject` (the list label, e.g. `Новость: 02.11.2026 : `). The UI then refreshes explorer.aspx with `ctl00$ContentSecondMenu$ButtonRePage = Button` and `ctl00$Result_Value = <object id>`. Every save sends **all** fields, so a save without `CheckBoxStatusObject` unpublishes – a write command must carry the current value unless it means to change it. **Publish / unpublish (verified, capture publish-2026-11-10):** save with `ctl00$Main$CheckBoxStatusObject = on` publishes, a save without the field unpublishes; the list row loses / gets `class='obj_not_published'` after the refresh.
+
+**Live writes through the CLI (2026-11-10, test section 59801, all re-read and verified):** create 524 / 304 / 534 with fields, save `text`, publish, unpublish, copy, sort, image upload, move to another section, trash, restore, permanent delete.
+- **A text that is one bare paragraph loses its tags:** saving `text = <p>Один абзац.</p>` stores `Один абзац.`; two or more blocks (`<p>…</p><p>…</p>`, `<h2>…</h2><p>…</p>`) and a `<p>` with attributes are kept as sent. Same on the site, so the check treats them as equal.
+- **News (534):** `dt_text = 10.11.2026` saved with the `_ClientState` left as it was – the list label became `Новость: 10.11.2026 : <zag>`; changing `dt_text` later works the same way. Fields `zag`, `name` (annotation), `txt` saved as sent. The news editor's BinaryFrame takes an image too.
+- **Where news live on this site:** section 1031 «Архив новостей» (`1001/1431/1031`, under «Сервисы»), newest first. Each news item's photos are separate **unpublished** image objects (304) in the same section, put into `txt` as `<p style="text-align: center;"><img src="sm_full.aspx?guid=<image id>" width="800" height="800" /></p>` (news 126433 with images 126443–126463).
+- **Ids are reused:** a copy and new objects can get ids of purged objects or from an old range (copy of 126743 got 6713; a later new news item got 126743 again after the first one was purged). Never assume a new id is larger than the old ones; take it from the reply or the list diff.
 
 Read-only parts (verified by GET, used by `edu object`): the type name is the bold text after «Тип:», the section path label is the `<span>` after the `Classifier` input (e.g. `Главная страница/…/`), `ctl00$Title_1` = `[<id>] Редактирование данных`, `ctl00$Title_2` contains a link to the public page `http://<site>/main.aspx?guid=<id>`.
 
