@@ -70,6 +70,16 @@ def editable_fields(page_fields: dict[str, str]) -> list[str]:
     return out
 
 
+def read_object_fields(site: Site, object_id: str) -> dict:
+    """One object as `edu object show` prints it: the summary, the editable field names
+    and their current values (news: `dt_text`, `zag`, `txt`, …)."""
+    page = dialogs.open_dialog(site.client, site.base_url, EDITOR_PATH, object_id)
+    obj = parse_object_editor(object_id, page.html)
+    editable = editable_fields(page.fields)
+    values = {k: page.fields.get(MAIN + k, "").strip("\r\n") for k in editable}
+    return {**asdict(obj), "editable_fields": editable, "fields": values}
+
+
 # ---------- edit / publish ----------
 
 
@@ -185,21 +195,30 @@ def plan_create(
             ids = [i for i in res.values.get("Result_Value_1", "").split(";") if i]
             if res.status != "Exit_2" or len(ids) != count:
                 raise WriteError(f"create not confirmed: {res.status!r} ids={ids} {res.messages}")
-            out = []
+            out, unsaved = [], {}
             for oid in ids:
                 time.sleep(site.delay)
                 if values:
-                    out.append(plan_update(site, oid, values).apply()["object"])
+                    res = plan_update(site, oid, values).apply()
+                    out.append(res["object"])
+                    if not res["verified"]:
+                        unsaved[oid] = res["mismatch"]
                 else:
                     out.append(_summary(read_object(site.client, site.base_url, oid)))
         wrong = [o["id"] for o in out if o["section_id"] != section_id]
-        return {"ids": ids, "objects": out, "verified": not wrong, "wrong_section": wrong}
+        return {
+            "ids": ids,
+            "objects": out,
+            "verified": not wrong and not unsaved,
+            "wrong_section": wrong,
+            "fields_not_saved": unsaved,
+        }
 
     return Change(
         "object.create",
         f"{count} object(s) of type {type_id} in section {section_id}",
         "edit",
-        {},
+        {k: (None, _norm(v)) for k, v in values.items()},
         notes,
         {"section": section_id, "type": type_id, "count": count, "values": values},
         do,

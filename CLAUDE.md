@@ -1,4 +1,4 @@
-# edu-by-mcp
+# edu-by-agent
 
 Tooling and knowledge that let agents operate the **edu.by site constructor** (the builder used to manage Belarusian education websites): create and edit pages, menus, news, documents and media through the same HTTP requests the constructor's web UI makes.
 
@@ -6,7 +6,7 @@ The repo has three layers, built in this order:
 
 1. **Knowledge** (`knowledge/`) – verified facts about the constructor: endpoints, request/response shapes, auth flow, quirks.
 2. **Skills** (`.claude/skills/`) – task-oriented instructions for agents ("publish a news item", "add a page to the menu") that call the CLI.
-3. **CLI** (`src/edu_by/`, command `edu`) – Python utilities: session handling, proxy, and a thin request client. A later **MCP server** will wrap the same client; it must not duplicate logic.
+3. **CLI** (`src/edu_by/`, command `edu`) – Python utilities: session handling, proxy, and a thin request client. The **MCP server** (`edu mcp`) wraps the same `api/`; it must not duplicate logic.
 
 ## Layout
 
@@ -26,16 +26,18 @@ src/edu_by/
   har.py                  # live HAR recorder, sanitizer, summary
   direct_proxy.py         # interface-bound local HTTP proxy (direct mode)
   site.py                 # Site: one logged-in site (client, session check, explorer, path cache, lock) – shared by CLI and MCP
+  mcp_server.py           # MCP server: tools over api/, skills' mcp.md as prompts, knowledge/ as resources
   api/                    # one module per constructor area:
                           #   reads: explorer (tree, lists, types), objects, treecache (section paths)
                           #   planned writes: changes (Change, token), dialogs, objects_write, sections, trash
-docs/mcp.md               # MCP server design (task 5)
+docs/mcp.md               # MCP server: tools, confirm_token contract, prompts, resources
+.mcp.json                 # registers `./edu mcp` for Claude Code
 knowledge/
   README.md               # index of what is known and how confident
   auth.md                 # login, captcha, cookies, expiry
   endpoints/              # one file per area, documented from real traffic
   captures/               # sanitized HAR excerpts used as evidence (no secrets)
-.claude/skills/<name>/SKILL.md
+.claude/skills/<name>/SKILL.md   # CLI scenario; mcp.md beside it = the same scenario in MCP tools (a prompt)
 tests/
 ```
 
@@ -64,6 +66,7 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu object set ID --set name=… # writes preview by default; --yes applies, delete level needs --token
 ./edu object upload ID FILE --shrink   # image ≤ 300 KB (re-encoded as JPEG if bigger)
 ./edu section add PARENT --title …   (also object add|copy|move|sort|upload|trash, section set|move|delete, trash restore|purge)
+./edu mcp                        # MCP server on stdio (stdout = protocol, logs on stderr)
 ./edu test                       # pytest
 ./edu lint | fmt                 # ruff check / fix + format
 ```
@@ -109,7 +112,7 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 - Be gentle with the server: no parallel bulk requests, small delay between write calls, respect any rate limits seen.
 - **Every write goes through a plan** (`edu_by.api.changes.Change`): plan functions only read and return before/after values and a token; `apply()` writes, then re-reads to verify. Don't add a write that skips this – the CLI and the MCP server both rely on it for the confirmation step.
 - Skills call the `edu` CLI (or the `edu_by` package). They don't hand-write curl with cookies. If a skill needs something the CLI lacks, add it to the CLI first.
-- Each skill's `SKILL.md`: when to use it, required inputs, exact commands, how to verify the result, and what to do on common errors (expired session, validation error).
+- Each skill's `SKILL.md`: when to use it, required inputs, exact commands, how to verify the result, and what to do on common errors (expired session, validation error). Its `mcp.md` says the same with MCP tool calls – keep the two in step (`tests/test_mcp.py` checks the pairing and the tool names).
 
 ## Git
 
@@ -125,5 +128,5 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Status
 
-Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | types`, shared `Site`, planned writes in `api/` with CLI commands (all live-tested 2026-11-10), `browse` with the saved session, skills `edu-find-content`, `edu-edit-content`, `edu-publish-news`, `edu-upload-file`, MCP SDK in the image. Captures are mapped in `knowledge/`.
+Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | types`, shared `Site`, planned writes in `api/` with CLI commands (all live-tested 2026-11-10), `browse` with the saved session, skills `edu-find-content`, `edu-edit-content`, `edu-publish-news`, `edu-upload-file`, MCP server `edu mcp` (tools, prompts, resources; live-tested). Captures are mapped in `knowledge/`.
 **Next work is listed in [`TASKS.md`](TASKS.md)** – start there, and update it as you finish tasks.

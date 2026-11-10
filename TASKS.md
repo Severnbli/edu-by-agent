@@ -40,13 +40,10 @@ Planned writes in `api/` (`changes.Change`: plan reads only, returns before/afte
 
 `.claude/skills/`: `edu-session`, `edu-find-content` (read), `edu-edit-content` (text, publish, objects, sections, trash), `edu-publish-news` (news with photos as unpublished 304 objects in `txt`), `edu-upload-file` (images with `--shrink`, documents as 734 link cards). To do later: a design skill once task 5a has CLI commands (style sets, ClearCache) – design writes are site-wide and not exposed yet.
 
-## 5. MCP server – ready to implement
+## 5. MCP server – done 2026-11-10
 
-Design: [`docs/mcp.md`](docs/mcp.md) (tools, the preview/`confirm_token` contract, session handling, stdout rule, tests). Ready: `mcp` SDK 1.30 in the image, stdio through `./edu` verified with a throwaway FastMCP server, `Site` and all plan functions. To do:
-- [ ] `src/edu_by/mcp_server.py` + `edu mcp`, tools as in docs/mcp.md
-- [ ] tests with the in-memory MCP client and `fake_site`
-- [ ] `.mcp.json` for Claude Code; read tools allowed, write tools on "ask"
-- [ ] live smoke test (task 3's CLI test passed; repeat through the MCP tools)
+`edu mcp` (`src/edu_by/mcp_server.py`), design and contract in [`docs/mcp.md`](docs/mcp.md): 8 read and 13 write tools (preview, then `confirm_token`), the skills' `mcp.md` as prompts, `knowledge/` as resources; `.mcp.json`; `tests/test_mcp.py`. Live-tested through a stdio client on a test section (since deleted). Fixed on the way: section move / delete with an id path, the create preview shows the field values, create reports fields that didn't save.
+- [ ] Claude Code permissions: allow the read tools (`mcp__edu-by__edu_session_status`, `…edu_tree`, `…edu_find_section`, `…edu_section`, `…edu_objects`, `…edu_object`, `…edu_types`, `…edu_trash_list`) in `.claude/settings.json`, keep writes on "ask" – the owner adds them (an agent may not change its own permissions).
 
 ## 5a. Site design refresh (in progress)
 
