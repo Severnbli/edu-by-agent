@@ -46,6 +46,8 @@ One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sect
 ## 5a. Site design refresh (in progress)
 
 Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (338 items, `index.json`). Prototype: `.session/design/prototype/` (`modern.src.css` → `build.py` → `modern.css`, screenshots, `compare.html`). Plan: add the style as **one new style set** loaded last, so rollback = detach it. Next:
+- [x] full design export via «Экспорт в архив» (2026-11-10, user-approved): `.session/design/export/download_-888.zip`, decoded to `decoded/` (format in design.md)
+- [ ] consider applying the redesign through «Импорт из архива» (new prefixed items) instead of editing live ones – needs a test on a copy
 - [ ] user approves the prototype (or asks for changes)
 - [ ] capture with the user: create a style set and attach it to a template (CssPacked / Templates save), on a test copy if possible
 - [ ] apply, ClearCache, check public pages and low-vision mode; rollback plan ready

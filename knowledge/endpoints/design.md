@@ -58,3 +58,25 @@ The public «Версия для слабовидящих» button switches clas
 ## Public site from the container browser
 
 Chromium with the PAC file timed out on the public school host (the httpx client reaches it through the same proxy). Working approach: route the page's edu.by requests through the httpx client (`page.route` + `route.fulfill`) and let other hosts go direct.
+
+## Utilities (RengerProvider.aspx?guid=Utility) – verified 2026-11-10
+
+| Item | Dialog | What it does |
+|---|---|---|
+| «Экспорт в архив» (export to archive) | `G_RengerProvider/ExportToArchives.aspx` | tree of templates (Мастер / Главный / Обычный / 404) with checkboxes `ctl00_Main_TreeListn<N>CheckBox` (`title="Template"`); async postback `ctl00$ButtonSave = Экспорт`. Reply: `Result_Status = Info`, `Result_Value_1 = <a href=/sm_full.aspx?guid=-888 …>Нажмите здесь для загрузки архива</a>`; GET that URL → `application/x-zip-compressed`. **Read-only for the site; run with user approval 2026-11-10** (12 templates → 3.7 MB) |
+| «Импорт из архива» (import) | `G_RengerProvider/ImportFromArchives.aspx` | `ctl00$Main$TextBoxPrefics` «Префикс имен» (default `Загрузка от <dd.mm.yyyy>.`), `ctl00$Main$TextBoxClassifier` (default `Дизайн от <date>.`, the section for imported binaries), `ctl00$Main$StatusHash`: `0` «Использовать существующие при совпадении HASH» (default), `1` «Заменять существующие…», `2` «Всегда создавать новые»; file `ctl00$Main$FileUploadArchive`, button `ctl00$AddButton$ButtonLoad` «Загрузить». **Not run.** The site's «Загрузка от 25.08.2025. …» items come from such an import |
+| «Поиск пустых классификаторов» | `G_RengerProvider/Analis/ClassiferFindNull.aspx` | `ctl00$Main$RadioButtonListAccess`: `0` sections without objects, `1` sections whose objects are all unpublished or have no language; `ctl00$AddButton$ButtonFind` «Анализ». Not run |
+| «Поиск больших вложений в объектах» | `G_RengerProvider/Analis/FindBigImg.aspx` | `ctl00$Main$SearchType` `all` / `img` / `non-img`; `ctl00$AddButton$ButtonAnalis` «Анализ». Not run |
+
+Both analysers also have `ctl00$ButtonSave` «Сохранить настройки» (save settings).
+
+### Archive format
+
+A ZIP of one file per item, named `<id>.<Kind>`, each **UTF-16LE XML**:
+- `<id>.Template` – `<Rp_Template guid title TypeTemplate=Master|Head|Normal|404 MasterPage SortId favicon dt_update>` with `<settings><root>` listing attached `<css value>`, `<js value>`, `<control value>` (the same thing `HiddenFieldForSave` edits), and `Content<N>` blocks of `<txt>` / `<control>` (the template body).
+- `<id>.Css` – `<Rp_Css guid name body>`; `<id>.JS` – `<Rp_JavaScript …>`.
+- `<id>.Control` – `<Rp_Controls guid fk="WJG.Core_<Module>" Title WhereUse>` with `<Settings><root><item guid value>` (module settings, e.g. `ClassifierList`).
+- `<id>.Localization` – `<LanguageResource guid Status Title>` with `<lang guid="ru" value>` (resource strings).
+- `<id>.Binary` – `<Binary fk BodyImage(base64) SizeImage MimeType Hash PreView(base64 jpeg)>` (images used by the design).
+
+Everything the selected templates use is included (12 templates → 112 controls, 93 strings, 61 images, 20 CSS, 16 JS). This is a complete design backup, and the import dialog suggests a design can be **added** as a new set of prefixed items, then switched to by pointing sections / templates at it – a safer route for the redesign than editing live items (untested).

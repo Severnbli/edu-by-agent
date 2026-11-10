@@ -8,7 +8,8 @@ Facts about the edu.by site constructor, taken from real traffic only. Each file
 | [model.md](model.md) | sections (classifiers), objects, object types, ID suffix scheme | verified |
 | [endpoints/explorer.md](endpoints/explorer.md) | explorer.aspx postbacks, tree, object list, toolbar actions | verified |
 | [endpoints/dialogs.md](endpoints/dialogs.md) | ClassifierEditor, ClassifierMove, AddObject, ObjectEditor, SelectClassifier, ObjectsSort, Templates, upload frames | partially verified |
-| [endpoints/design.md](endpoints/design.md) | RengerProvider: templates, modules, style sets, scripts; low-vision mode | partially verified |
+| [endpoints/design.md](endpoints/design.md) | RengerProvider: templates, modules, style sets, scripts; low-vision mode; utilities (design export / import archive, analysers) | partially verified |
+| [endpoints/security.md](endpoints/security.md) | Security tab: users, groups, access, access map, audit | partially verified |
 | [endpoints/systemwjg.md](endpoints/systemwjg.md) | SystemWJG.asmx JSON methods | partially verified |
 
 ## Captures
@@ -23,4 +24,6 @@ Raw and sanitized captures live in `.session/har/` (git-ignored). Excerpts copie
 
 ## Not captured yet
 
-Restore from trash and the trash view, section copy, changing a section's template (`fk_Template`), document upload (type 734) and its size limit, menu changes.
+There is no «copy section» action in the explorer toolbar (only add, move, delete sections).
+
+Restore from trash and the trash view, saving a section's template (`fk_Template`; field and options known), design import from archive, the two analysers, document upload (type 734) and its size limit, menu changes.
