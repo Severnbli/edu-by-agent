@@ -1,7 +1,7 @@
 ---
 status: partially verified
 updated: 2026-11-10
-source: capture constructor-2026-11-09 (#1128–#1258), capture edit-2026-11-10 (#145–#2390), read-only GETs of the dialogs
+source: capture constructor-2026-11-09 (#1128–#1258), capture edit-2026-11-10 (#145–#2390), capture publish-2026-11-10 (#231–#340), upload probes 2026-11-10 (test section 59791), read-only GETs of the dialogs
 ---
 
 # Dialog pages (G_Data/*, G_All/*)
@@ -68,15 +68,20 @@ Type-specific fields (labels verbatim):
 | 534 Новость (news) | `dt_text` «Дата *» (date, `dd.mm.yyyy`, required) + `_ClientState`, `zag` «Заголовок» (headline), `name` «Аннотация» (summary), `txt` (body HTML, rich editor), `dop` «Используйте для вставки кода скриптов, iframe и пр.» (scripts, iframes) |
 | 304 Графический объект (image) | `name` «Подпись» (caption), `text` «Комментарий» (comment); the file itself goes through BinaryFrame (below) |
 
-**Save (verified 2026-11-10):** async postback of the full form + `ctl00$ButtonSave` (stay) or `ctl00$ButtonSaveExit`. Reply: `Result_Status = Save | SaveExit` and a refreshed `ctl00$Main$HiddenTitleObject` (the list label, e.g. `Новость: 02.11.2026 : `). The UI then refreshes explorer.aspx with `ctl00$ContentSecondMenu$ButtonRePage = Button` and `ctl00$Result_Value = <object id>`. Every save sends **all** fields, so a save without `CheckBoxStatusObject` unpublishes – a write command must carry the current value unless it means to change it. Publishing was not toggled in the capture (no save had the checkbox on), so "set the checkbox and save" is the expected publish flow but not yet observed.
+**Save (verified 2026-11-10):** async postback of the full form + `ctl00$ButtonSave` (stay) or `ctl00$ButtonSaveExit`. Reply: `Result_Status = Save | SaveExit` and a refreshed `ctl00$Main$HiddenTitleObject` (the list label, e.g. `Новость: 02.11.2026 : `). The UI then refreshes explorer.aspx with `ctl00$ContentSecondMenu$ButtonRePage = Button` and `ctl00$Result_Value = <object id>`. Every save sends **all** fields, so a save without `CheckBoxStatusObject` unpublishes – a write command must carry the current value unless it means to change it. **Publish / unpublish (verified, capture publish-2026-11-10):** save with `ctl00$Main$CheckBoxStatusObject = on` publishes, a save without the field unpublishes; the list row loses / gets `class='obj_not_published'` after the refresh.
 
 Read-only parts (verified by GET, used by `edu object`): the type name is the bold text after «Тип:», the section path label is the `<span>` after the `Classifier` input (e.g. `Главная страница/…/`), `ctl00$Title_1` = `[<id>] Редактирование данных`, `ctl00$Title_2` contains a link to the public page `http://<site>/main.aspx?guid=<id>`.
 
-## BinaryFrame.aspx / SelectImage.aspx – file upload (not captured)
+## BinaryFrame.aspx – file upload (verified 2026-11-10 for images)
 
-- News and image editors embed `/G_All/BinaryFrame.aspx?guid=<object id>`: a plain (non-async) form with `<input type=file name=FileUploadIco>` and submit `ButtonSaveBinary` «Загрузить» (upload).
-- `/G_All/SelectImage.aspx?guid=<object id>` («Выбор изображения», choose image): a tree of sections plus `ctl00$Main$FileUploadIco` (file) and `ctl00$Main$ButtonSaveBinary` «Загрузить».
-- **No upload POST was recorded** (the dialogs were opened, no file was sent – the browser runs in a container and its file picker sees only the repo). Thumbnails: `/sm.aspx?guid=<id>`, `/G_All/sm.aspx?guid=<id>&tyui=<random>`.
+News and image editors embed `/G_All/BinaryFrame.aspx?guid=<object id>`: a **plain (non-async) multipart form** (`enctype="multipart/form-data"`, action `./BinaryFrame.aspx?guid=<id>`) with `__EVENTTARGET`, `__EVENTARGUMENT`, `__VIEWSTATE`, `__VIEWSTATEGENERATOR`, `__EVENTVALIDATION`, the file input `FileUploadIco` and the hidden submit `ButtonSaveBinary` (value `""`; the page's `SendFile()` clicks it when a file is chosen).
+
+Upload = GET the frame, then POST its fields + `ButtonSaveBinary=` + the file as `FileUploadIco`. Tested by direct POSTs on image objects (type 304) in a test section:
+- The file is stored **at once** – no ObjectEditor save needed. The server re-encodes it: `/sm.aspx?guid=<id>` (thumbnail) then returns `image/jpeg`; for an object without a file it returns a placeholder (`text/html` content type, PNG bytes, 2214 B).
+- **Size limit ≈ 300 000 bytes**: 299 000 B accepted, 301 000 B rejected (PNG). Pixel size doesn't matter (8000×6000 at 148 KB accepted). A rejected file still gets **HTTP 200 and no message** – the frame just re-renders. So the only way to know is to check the thumbnail afterwards.
+- Limit for documents (type 734, «файл») not tested.
+
+`/G_All/SelectImage.aspx?guid=<object id>` («Выбор изображения», choose image) has the same pair `ctl00$Main$FileUploadIco` / `ctl00$Main$ButtonSaveBinary` «Загрузить» plus a section tree (not used yet). Thumbnails: `/sm.aspx?guid=<id>`, `/G_All/sm.aspx?guid=<id>&tyui=<random>`.
 
 ## SelectClassifier.aspx?guid=<section id> – pick a section (verified 2026-11-10)
 

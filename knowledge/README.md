@@ -16,9 +16,10 @@ Facts about the edu.by site constructor, taken from real traffic only. Each file
 |---|---|---|
 | constructor-2026-11-09 | 2026-11-09 | login; tree browsing; system templates view; add section under 1051, rename, add HTML block object, delete it, remove delete protection, delete the section |
 | edit-2026-11-10 | 2026-11-10 | add sections, rename, move a section (above / inside / below), create 5 HTML blocks, save text (stay / exit), copy objects, move an object to another section, sort, move to trash, create a news item and an image object, open upload dialogs, delete sections, open and save page templates, ClearCache |
+| publish-2026-11-10 | 2026-11-10 | add section, add HTML block, publish it, unpublish it |
 
 Raw and sanitized captures live in `.session/har/` (git-ignored). Excerpts copied into `captures/` must come from the sanitized file.
 
 ## Not captured yet
 
-Publishing/unpublishing (checking «Разрешить публикацию» and saving), the actual file and image upload POST (BinaryFrame.aspx), restore from trash and the trash view, section copy, changing a section's template (`fk_Template`), menu changes.
+Restore from trash and the trash view, section copy, changing a section's template (`fk_Template`), document upload (type 734) and its size limit, menu changes.
