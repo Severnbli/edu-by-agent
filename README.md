@@ -1,4 +1,4 @@
-# edu-by-mcp
+# edu-by-agent
 
 CLI, MCP-сервер и навыки для Claude Code, чтобы вести сайт учреждения образования в конструкторе сайтов edu.by (`wp.<регион>.edu.by/explorer.aspx`).
 
