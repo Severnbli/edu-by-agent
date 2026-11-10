@@ -10,6 +10,7 @@ dependencies = [
     "typer>=0.12",
     "pydantic-settings>=2.3",
     "playwright>=1.45",
+    "mcp>=1.9,<2",  # MCP server (task 5): official Python SDK, FastMCP
 ]
 
 [project.scripts]

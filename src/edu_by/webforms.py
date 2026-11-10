@@ -119,21 +119,46 @@ class WebFormPage:
         event_argument: str = "",
         extra: dict[str, str] | None = None,
     ) -> list[DeltaRecord]:
-        data = {
-            **self.fields,
-            script_manager: f"{panel}|{event_target}",
-            "__EVENTTARGET": event_target,
-            "__EVENTARGUMENT": event_argument,
-            "__ASYNCPOST": "true",
-            **(extra or {}),
-        }
+        """Async postback raised by a control (`__EVENTTARGET`), e.g. a tree node click."""
+        return self._post(
+            {
+                script_manager: f"{panel}|{event_target}",
+                "__EVENTTARGET": event_target,
+                "__EVENTARGUMENT": event_argument,
+                **(extra or {}),
+            }
+        )
+
+    def submit(
+        self,
+        script_manager: str,
+        panel: str,
+        button: str,
+        value: str,
+        extra: dict[str, str] | None = None,
+    ) -> list[DeltaRecord]:
+        """Async postback of a submit button: the button's name and value go in the body
+        and `__EVENTTARGET` stays empty (dialog Save buttons, «Удалить» section)."""
+        return self._post(
+            {
+                script_manager: f"{panel}|{button}",
+                "__EVENTTARGET": "",
+                "__EVENTARGUMENT": "",
+                **(extra or {}),
+                button: value,
+            }
+        )
+
+    def _post(self, overrides: dict[str, str]) -> list[DeltaRecord]:
+        data = {**self.fields, "__ASYNCPOST": "true", **overrides}
+        u = httpx.URL(self.url)
         r = self.client.post(
             self.url,
             data=data,
             headers={
                 "X-MicrosoftAjax": "Delta=true",
                 "X-Requested-With": "XMLHttpRequest",
-                "Origin": f"{httpx.URL(self.url).scheme}://{httpx.URL(self.url).host}",
+                "Origin": f"{u.scheme}://{u.host}",
                 "Referer": self.url,
             },
         )

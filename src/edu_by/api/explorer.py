@@ -6,7 +6,9 @@ How the tree behaves (verified live, see knowledge/endpoints/explorer.md):
   node, or the node that is already current, answers with an `error|500|` record.
 - The server remembers the current node (and what is expanded) per session.
 
-Nothing here writes: selecting nodes and paging only change the UI state of the session.
+Selecting nodes and paging only change the UI state of the session. The toolbar helpers at
+the end (`toolbar`, `main_menu`) send write actions; they are called only from the planned
+writes in `edu_by.api.sections`, `objects_write` and `trash`, never directly by commands.
 """
 
 from __future__ import annotations
@@ -27,6 +29,8 @@ TREE_TARGET = "ctl00$Main_Left$TreeClassifier"
 PAGER_PANEL = "ctl00$ContentSecondMenu$UpdatePanel3"
 PAGER_TARGET = "ctl00$ContentSecondMenu$PageList"
 CURRENT_FIELD = "ctl00$Main_Left$GUID_CLASSIFIER"
+MAIN_MENU_PANEL = "ctl00$ContentMainMenu$UpdatePanel2"  # section toolbar
+TOOLBAR_PANEL = PAGER_PANEL  # object toolbar shares the pager's panel
 
 TREE_PANEL_ID = "ctl00_Main_Left_UpdatePanel1"
 LIST_PANEL_ID = "ctl00_Main_Right_UpdatePanelMainList"
@@ -267,14 +271,28 @@ class Explorer:
                 known.title = n.title
 
     def _postback(self, panel: str, target: str, arg: str = "", extra=None) -> list[DeltaRecord]:
+        self._count(arg or f"{target}={extra}")
+        records = self.page.async_postback(SCRIPT_MANAGER, panel, target, arg, extra)
+        self._absorb(records)
+        return records
+
+    def _submit(self, panel: str, button: str, value: str = "Button") -> list[DeltaRecord]:
+        """Submit-button postback (no `__EVENTTARGET`), e.g. «Удалить» section."""
+        self._count(button)
+        records = self.page.submit(SCRIPT_MANAGER, panel, button, value)
+        self._absorb(records)
+        return records
+
+    def _count(self, what: str) -> None:
         if self._requests >= self.max_requests:
             raise ExplorerError(f"stopped after {self._requests} requests (max_requests)")
         if self._requests:
             time.sleep(self.delay)
         self._requests += 1
         if self.on_request:
-            self.on_request(self._requests, arg or f"{target}={extra}")
-        records = self.page.async_postback(SCRIPT_MANAGER, panel, target, arg, extra)
+            self.on_request(self._requests, what)
+
+    def _absorb(self, records: list[DeltaRecord]) -> None:
         for r in records:
             if r.type == "updatePanel" and r.id == TREE_PANEL_ID:
                 self.tree_html = r.content
@@ -283,7 +301,6 @@ class Explorer:
                 self.list_html = r.content
             elif r.type == "updatePanel" and r.id == PAGER_PANEL_ID:
                 self.pager_html = r.content
-        return records
 
     def _visible(self, value: str) -> bool:
         return any(n.value == value for n in self.nodes())
@@ -399,3 +416,78 @@ class Explorer:
             current, pages = parse_pages(self.pager_html)
             current = nxt if current is None else current
         return rows
+
+    def rows(self) -> list[ObjectRow]:
+        """Objects on the currently shown list page (no request)."""
+        return parse_object_list(self.list_html)
+
+    def select_trash(self, type_id: str) -> str:
+        """Show the trash of an object type (`sNodeTrashe\\<group>\\<type id + 1>`)."""
+        tid = str(int(type_id) + 1)
+        if self.current == tid:
+            return tid
+        for n in self.nodes():
+            if n.kind == TRASH and n.value and n.value.endswith("\\" + tid):
+                self._select_value(n.value)
+                return tid
+        raise ExplorerError(f"no trash node for type {type_id} in the tree")
+
+    def find_in_list(self, ids: set[str], max_pages: int = 100) -> dict[str, ObjectRow]:
+        """Page through the current list (from page 0) until all `ids` are seen."""
+        current, _ = parse_pages(self.pager_html)
+        if current:
+            self._postback(PAGER_PANEL, PAGER_TARGET, "", {PAGER_TARGET: "0"})
+        found: dict[str, ObjectRow] = {}
+        for page in range(max_pages):
+            found.update({r.id: r for r in self.rows() if r.id in ids})
+            _, pages = parse_pages(self.pager_html)
+            if ids <= found.keys() or not pages or max(pages) <= page:
+                break
+            self._postback(PAGER_PANEL, PAGER_TARGET, "", {PAGER_TARGET: str(page + 1)})
+        return found
+
+    # ---------- write actions (callers: planned writes only) ----------
+
+    def toolbar(self, target: str, values: dict[str, str]) -> list[DeltaRecord]:
+        """Object toolbar action on the current section, e.g. ButtonObjectMove.
+
+        `values` fills `ctl00$Result_Value*` the way the UI does after its dialog closed.
+        """
+        extra = {
+            "ctl00$Result_Status": "",
+            "ctl00$Result_Value": "",
+            "ctl00$Result_Value_2": "",
+            "ctl00$Result_Value_3": "",
+            **values,
+        }
+        records = self._postback(TOOLBAR_PANEL, target, "", extra)
+        _raise_on_error(records, target)
+        return records
+
+    def main_menu(self, target: str) -> list[DeltaRecord]:
+        """Section toolbar event, e.g. MyButtonAddClassifier (on the current section)."""
+        records = self._postback(MAIN_MENU_PANEL, target)
+        _raise_on_error(records, target)
+        return records
+
+    def main_menu_submit(self, button: str) -> list[DeltaRecord]:
+        records = self._submit(MAIN_MENU_PANEL, button)
+        _raise_on_error(records, button)
+        return records
+
+    def forget(self, section_id: str) -> None:
+        """Drop a section and its known descendants (after a move or delete)."""
+        for sid, sec in list(self.sections.items()):
+            if section_id in sec.path:
+                del self.sections[sid]
+                self.stale.add(sid)
+        for sid, sec in list(self.cached.items()):
+            if section_id in sec.path:
+                del self.cached[sid]
+                self.stale.add(sid)
+
+
+def _raise_on_error(records: list[DeltaRecord], what: str) -> None:
+    for r in records:
+        if r.type == "error":
+            raise ExplorerError(f"{what}: server error {r.id} {r.content[:200]}")
