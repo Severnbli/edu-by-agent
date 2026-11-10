@@ -63,7 +63,7 @@ So a redesign can change the HTML of menus, news lists, breadcrumbs and the lang
 
 ## Fonts and files for a design
 
-Binaries of a design are images only (the export has gif / jpeg / png; uploads reject other types, see dialogs.md). Web fonts can't be uploaded: the platform serves only `/fonts/glyphicons/…` and `/fonts/fontawesome/…` (used by sets 1212 and 1272). A new font must come from an external host (`@import` in a style set or `<link>` in the Head module) or be replaced by a system font stack. Font files inside an import archive – not tried.
+Binaries of a design are images only (the export has gif / jpeg / png; uploads reject other types, see dialogs.md). Web fonts can't be uploaded: the platform serves only `/fonts/glyphicons/…` and `/fonts/fontawesome/…` (used by sets 1212 and 1272). A new font must come from an external host (`@import` in a style set or `<link>` in the Head module) or be replaced by a system font stack. The public site sends no `Content-Security-Policy` (header or meta; IIS 8.5, checked 2026-11-10) and `/fonts/` itself answers 403, so an external font host is not blocked. Font files inside an import archive – not tried.
 
 ## HTML in content blocks
 
@@ -71,7 +71,7 @@ The home block 1063 (type 524, saved through the editor) keeps `class` (`content
 
 ## This site's live design (sch12, 2026-11-10)
 
-Master 1144 «Загрузка от 25.08.2025. Основной мастер шаблон» (Главный 1154, Обычный 1164, 404 1174 use it) – CSS 1212–1282 (8 sets), JS 1203–1283 (9). Languages in module 2551: **ru and be only** (`<span>РУС</span>`, `<span>БЕЛ</span>`), no English version.
+Master 1144 «Загрузка от 25.08.2025. Основной мастер шаблон» (Главный 1154, Обычный 1164, 404 1174 use it) – CSS 1212–1282 (8 sets), JS 1203–1283 (9). Languages in module 2551: **ru and be only** (`<span>РУС</span>`, `<span>БЕЛ</span>`), no English version (`main.aspx?lang=en` and `?lang=be` return the same 141 994-byte page; the home block 1063 has only «Русский» among its languages). Adding `en` to the module is easy, but pages would be empty without translated content.
 
 ## Attaching CSS / JS to a template
 
