@@ -11,8 +11,8 @@ Capture `edit-2026-11-10` documented in `knowledge/endpoints/dialogs.md` and `ex
 Still missing – record a short second capture (`./edu browse --har edit2-<date>`) on a test section:
 - [x] publish and unpublish (capture publish-2026-11-10)
 - [x] image upload: tested by direct POSTs, limit ≈ 300 000 bytes, rejected files give no error (dialogs.md). Test section 59791 «Тест загрузки картинок (удалить)» under 1011 holds the test objects – delete it when done
-- [ ] document upload (type 734) and its limit
-- [ ] open «Корзина объектов» (trash) and restore an object (the user does trash work themselves – don't touch it without asking)
+- [x] document upload (type 734): documents are not stored on the site – 734 / 594 are cards with a Yandex.Disk link (`format`, `size`, `url`); only images (≤ 300 KB) upload
+- [x] trash view, restore and permanent delete (verified on own test objects; the user allowed it 2026-11-10). Test section 59791 and its objects are deleted and purged
 - [ ] copy a section; change a section's template (`fk_Template`)
 
 Do **not** save page templates (G_RengerProvider/Templates.aspx) in captures: saving rewrites the site-wide template even with no edits.
