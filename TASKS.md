@@ -43,12 +43,19 @@ One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sect
 
 `edu mcp` exposing the api/ functions as MCP tools, reusing the same code (no duplicated logic). Write tools keep the confirmation step.
 
+## 5a. Site design refresh (in progress)
+
+Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (338 items, `index.json`). Prototype: `.session/design/prototype/` (`modern.src.css` → `build.py` → `modern.css`, screenshots, `compare.html`). Plan: add the style as **one new style set** loaded last, so rollback = detach it. Next:
+- [ ] user approves the prototype (or asks for changes)
+- [ ] capture with the user: create a style set and attach it to a template (CssPacked / Templates save), on a test copy if possible
+- [ ] apply, ClearCache, check public pages and low-vision mode; rollback plan ready
+
 ## 6. Open questions (small, any time)
 
 - [ ] Does `IsSession` or a GET of explorer.aspx reset the ~1 h idle timer? Keep one session idle >1 h and test; then fix `session keepalive` to use the cheapest request that works.
 - [ ] Does the security level change the idle timeout?
 - [x] `ctl00$Main$CheckBoxStatusObject` («Разрешить публикацию»): checked = published (2026-11-10)
-- [ ] Why preview requests to the public site host failed during the first capture (the site itself is reachable).
+- [x] Preview requests to the public host: Chromium with the PAC times out there, httpx works; route edu.by through httpx (design.md)
 - [ ] Language variants: field names for other languages (`title_<lang>`), `ClassifierLang.aspx`.
 
 ## Done
