@@ -4,17 +4,17 @@ Backlog for future sessions. Pick the top open task, keep work on `dev`, commit 
 
 Before any task that talks to the site: `./edu proxy up` (direct mode; `EDU_INTERFACE` must name the uplink that is up – `wlo1` on Wi-Fi, `eno1` on cable), then `./edu session check`. If the session is expired, ask the user to run `./edu session login` (site, login and password are prefilled from `.env`; they only solve the captcha). You can also start it yourself in the background and wait for it to finish.
 
-## 1. Capture the missing write flows (needs the user)
+## 1. Capture the write flows – mostly done 2026-11-10
 
-Ask the user to run `./edu browse --har edit-<date>` and do, on a **test section**:
-- open an object (HTML block), change its text, Save (Сохранить и остаться) and Save and exit
-- publish and unpublish an object
-- create a news item (type 534) and fill its fields
-- upload an image (type 304) and a downloadable file (type 734) – `BinaryFrame.aspx`
-- move an object to trash and restore it; move an object to another section; sort objects
-- copy a section, move a section; change a section's template (`fk_Template`)
+Capture `edit-2026-11-10` documented in `knowledge/endpoints/dialogs.md` and `explorer.md`: section add / rename / protection / move (ClassifierMove: above, inside, below) / delete, object create (`N_Count`, new ids in `Result_Value_1`), object save (Save, SaveExit; news and image fields), copy, move to another section, sort, move to trash, ClearCache, page templates.
 
-Then: check the sanitized capture for leaks (no cookie values or GuidSession UUIDs from the raw file), summarize it with `./edu har summary`, and extend `knowledge/endpoints/*.md`. Done when every action in the "Not captured yet" list in `knowledge/README.md` is documented.
+Still missing – record a short second capture (`./edu browse --har edit2-<date>`) on a test section:
+- [ ] publish and unpublish: tick / untick «Разрешить публикацию» in an object and save
+- [ ] upload an image and a file: the browser's file picker sees only the repo, so put the files in `.session/upload/` first (git-ignored) and pick them from `/app/.session/upload/`
+- [ ] open «Корзина объектов» (trash) and restore an object
+- [ ] copy a section; change a section's template (`fk_Template`)
+
+Do **not** save page templates (G_RengerProvider/Templates.aspx) in captures: saving rewrites the site-wide template even with no edits.
 
 ## 2. Read-only API layer – done 2026-11-10
 
@@ -27,7 +27,7 @@ Follow-ups:
 
 ## 3. Write operations with confirmation
 
-Only after task 1 has documented the flow. Each write command prints a dry-run of what changes and needs `--yes` (or an explicit confirmation from the user) to run:
+Section add/rename/move, object create, save text, copy, move, sort and trash are documented; publish and upload wait for the second capture. Each write command prints a dry-run of what changes and needs `--yes` (or an explicit confirmation from the user) to run:
 - `edu object set-text <id> --file content.html`
 - `edu object publish|unpublish <id>`
 - `edu object add <section> --type 534 --title ...`

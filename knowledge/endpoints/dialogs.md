@@ -1,12 +1,16 @@
 ---
 status: partially verified
-updated: 2026-11-09
-source: capture constructor-2026-11-09 (#1128–#1258), read-only GETs of the dialogs
+updated: 2026-11-10
+source: capture constructor-2026-11-09 (#1128–#1258), capture edit-2026-11-10 (#145–#2390), read-only GETs of the dialogs
 ---
 
-# Dialog pages (G_Data/*)
+# Dialog pages (G_Data/*, G_All/*)
 
-Opened by explorer.aspx in an iframe dialog. Each is its own WebForms page: GET it (safe, read-only), then POST the full form back with a submit button field. Dialog posts use `ctl00$ScriptManagerDialog` instead of `ctl00$ScriptManagerWindow`. After the dialog closes, the UI refreshes explorer.aspx with a postback (see explorer.md).
+Opened by explorer.aspx in an iframe dialog. Each is its own WebForms page: GET it (safe, read-only), then POST the full form back as an **async postback** with a submit button field. Dialog posts use `ctl00$ScriptManagerDialog` instead of `ctl00$ScriptManagerWindow`.
+
+**Result convention (verified 2026-11-10):** the reply's `ctl00_UpdatePanelMain` panel carries hidden fields `ctl00$Result_Status` (`Save` = saved and stays open, `SaveExit` = saved and closes, `Exit_2` = done with a result), `ctl00$Result_Value_1`, `ctl00$Result_Value_2`. After a dialog closes, the UI refreshes explorer.aspx with a postback (see explorer.md); the dialog's result is passed on in `ctl00$Result_Value*` of that postback.
+
+Buttons common to edit dialogs: `ctl00$ButtonSave` (Сохранить и остаться, save and stay), `ctl00$ButtonSaveExit` (Сохранить и выйти, save and exit), `ctl00$ButtonExit` (Выйти без сохранения / Закрыть, exit without saving).
 
 ## ClassifierEditor.aspx?guid=<section id> – section properties
 
@@ -14,41 +18,79 @@ Fields (`ctl00$Main$…`):
 
 | Field | Meaning |
 |---|---|
-| `Name` | internal name |
-| `title_ru`, `title_ru_status` (checkbox) | Russian title, enabled. Other languages likely `title_<lang>` (unverified) |
-| `IsDelete` (checkbox) | **protection from deletion**; `IsDelClassifier` returns `""` while it is on |
-| `fk_Template` (select) | page template, `0` = inherit from hierarchy; options e.g. 1024 Базовый шаблон |
-| `StatusDirectLink` | 0 in captures |
+| `Name` | internal name (a new section is created as `New`) |
+| `title_ru`, `title_ru_status` (checkbox) | Russian title shown on the site, and whether it is enabled. Other languages likely `title_<lang>` (unverified) |
+| `IsDelete` (checkbox) | **protection from deletion**, on for a new section; `IsDelClassifier` returns `""` while it is on |
+| `fk_Template` (select) | page template, `0` = inherit from hierarchy; options e.g. 1024 Базовый шаблон. Changing it is not captured yet |
+| `StatusDirectLink` | `0` / `2` seen; meaning not known |
 | `Tags`, `SpecialClasifierAA` | not explored |
 
-Save: `ctl00$ButtonSaveExit = Сохранить и выйти` (Save and exit). Security dialog: `/G_Security/Classifier.aspx?guid=`.
+Save (verified 2026-11-10): POST with `ctl00$ButtonSave` or `ctl00$ButtonSaveExit`; reply `Result_Status = Save | SaveExit`. Unchecked checkboxes are simply absent from the POST (standard HTML), so turning protection off = leave `IsDelete` out. Then the UI refreshes with `MyButtonEditClassifier` (explorer.md). Security dialog: `/G_Security/Classifier.aspx?guid=`.
 
-## AddObject.aspx?guid=<section id> – create objects
+## ClassifierMove.aspx?guid=<section id> – move a section (verified 2026-11-10)
+
+Two trees: «Исходный классификатор» (source, `ctl00$Main$TreeViewSource`) and «Принимающий классификатор» (target, `ctl00$Main$TreeClassifier`). Steps:
+
+1. GET the dialog.
+2. Select the target node: async postback `__EVENTTARGET = ctl00$Main$TreeClassifier`, `__EVENTARGUMENT = s<path>` – **note the prefix is `s`, not `sNodeClassifier`**, e.g. `s1001\56621` or `s1001\56621\59631`. Selecting a node expands it (lazy, like explorer).
+3. Place the section relative to it: async postback with `__EVENTTARGET` =
+   - `ctl00$Main$MoveUp` – «Выше выбранного» (above the selected, same parent)
+   - `ctl00$Main$MoveRight` – «Правее выбранного» (inside the selected, as a child)
+   - `ctl00$Main$MoveDown` – «Ниже выбранного» (below the selected, same parent)
+4. The dialog closes and the UI re-GETs `/Explorer.aspx`.
+
+So the same dialog both moves sections between parents and sorts sections.
+
+## AddObject.aspx?guid=<section id> – create objects (verified 2026-11-10)
 
 - Types: elements with `gg="<type id>"` (see model.md); the click handler copies `gg` into the hidden `ctl00$Main$SelType`.
-- POST fields: `ctl00$Main$Classifier = <section id>`, `ctl00$Main$SelType = <type id>`, `ctl00$Main$N_Count = 1` (how many), button `ctl00$AddButton$ButtonMake = Создать` (Create).
-- Observed: one empty object is created (126653 for type 524). Fill it with ObjectEditor.
+- POST fields: `ctl00$Main$Classifier = <section id>`, `ctl00$Main$SelType = <type id>`, `ctl00$Main$N_Count = <how many>`, button `ctl00$AddButton$ButtonMake = Создать` (Create).
+- Reply: `Result_Status = Exit_2`, **`Result_Value_1 = ;<id>;<id>;…`** (ids of the new objects), `Result_Value_2 = Новый объект`. `N_Count = 5` created 5 empty objects at once.
+- New objects are **unpublished**. The UI then refreshes explorer.aspx with `ButtonObjectAdd` and opens ObjectEditor for the new object. Seen for types 524 (Блок html), 534 (Новость), 304 (Графический объект).
 
 ## ObjectEditor.aspx?guid=<object id> – edit an object
 
-Fields (`ctl00$Main$…`):
+Common fields (`ctl00$Main$…`):
 
 | Field | Meaning |
 |---|---|
-| `name` | title |
-| `text` | main HTML content (textarea, rich editor `ctl00_Main_text`) |
-| `dop` | additional content (second editor, type-dependent) |
-| `Tags` | tags |
 | `CheckBoxStatusObject` (checkbox) | «Разрешить публикацию» (allow publication): checked = published (verified) |
-| `Classifier` | parent section |
-| `ListLang$<n>` (checkbox) | languages the object is shown in |
-| `IsClearCache`, `HiddenTitleObject` | hidden helpers |
+| `Classifier` | parent section; label warns «при смене классификатора объект…» (changing it moves the object) |
+| `ListLang$<n>` (checkbox) | languages the object is shown in (`ListLang$0` = Русский) |
+| `Tags` | tags |
+| `IsClearCache`, `HiddenTitleObject` | hidden helpers (`IsClearCache = 0` in all saves) |
 
-Read-only parts (verified 2026-11-10 by GET, used by `edu object`): the type name is the bold text after «Тип:», the section path label is the `<span>` after the `Classifier` input (e.g. `Главная страница/…/`), `ctl00$Title_1` = `[<id>] Редактирование данных`, `ctl00$Title_2` contains a link to the public page `http://<site>/main.aspx?guid=<id>`, language checkboxes `ListLang$<n>` have `<label>`s (`Русский`, ...). `name` is labelled «Описание блока» (block description) for HTML blocks.
+Type-specific fields (labels verbatim):
 
-Buttons: `ctl00$ButtonSave` (Сохранить и остаться, save and stay), `ctl00$ButtonSaveExit` (save and exit), `ctl00$ButtonExit` (exit without saving).
-Binary objects (images, files) embed `/G_All/BinaryFrame.aspx?guid=<object id>` for upload – **upload flow not captured yet**.
+| Type | Fields |
+|---|---|
+| 524 Блок html (текст раздела) | `name` «Описание блока» (block description), `text` (HTML, rich editor), `dop` |
+| 534 Новость (news) | `dt_text` «Дата *» (date, `dd.mm.yyyy`, required) + `_ClientState`, `zag` «Заголовок» (headline), `name` «Аннотация» (summary), `txt` (body HTML, rich editor), `dop` «Используйте для вставки кода скриптов, iframe и пр.» (scripts, iframes) |
+| 304 Графический объект (image) | `name` «Подпись» (caption), `text` «Комментарий» (comment); the file itself goes through BinaryFrame (below) |
+
+**Save (verified 2026-11-10):** async postback of the full form + `ctl00$ButtonSave` (stay) or `ctl00$ButtonSaveExit`. Reply: `Result_Status = Save | SaveExit` and a refreshed `ctl00$Main$HiddenTitleObject` (the list label, e.g. `Новость: 02.11.2026 : `). The UI then refreshes explorer.aspx with `ctl00$ContentSecondMenu$ButtonRePage = Button` and `ctl00$Result_Value = <object id>`. Every save sends **all** fields, so a save without `CheckBoxStatusObject` unpublishes – a write command must carry the current value unless it means to change it. Publishing was not toggled in the capture (no save had the checkbox on), so "set the checkbox and save" is the expected publish flow but not yet observed.
+
+Read-only parts (verified by GET, used by `edu object`): the type name is the bold text after «Тип:», the section path label is the `<span>` after the `Classifier` input (e.g. `Главная страница/…/`), `ctl00$Title_1` = `[<id>] Редактирование данных`, `ctl00$Title_2` contains a link to the public page `http://<site>/main.aspx?guid=<id>`.
+
+## BinaryFrame.aspx / SelectImage.aspx – file upload (not captured)
+
+- News and image editors embed `/G_All/BinaryFrame.aspx?guid=<object id>`: a plain (non-async) form with `<input type=file name=FileUploadIco>` and submit `ButtonSaveBinary` «Загрузить» (upload).
+- `/G_All/SelectImage.aspx?guid=<object id>` («Выбор изображения», choose image): a tree of sections plus `ctl00$Main$FileUploadIco` (file) and `ctl00$Main$ButtonSaveBinary` «Загрузить».
+- **No upload POST was recorded** (the dialogs were opened, no file was sent – the browser runs in a container and its file picker sees only the repo). Thumbnails: `/sm.aspx?guid=<id>`, `/G_All/sm.aspx?guid=<id>&tyui=<random>`.
+
+## SelectClassifier.aspx?guid=<section id> – pick a section (verified 2026-11-10)
+
+Used by «Переместить объекты». Select a node (`__EVENTTARGET = ctl00$Main$TreeClassifier`, `__EVENTARGUMENT = s1001\56621\59771`), then POST `ctl00$ButtonSaveExit = Выбрать` (Choose). Reply: `Result_Status = Exit_2`, `Result_Value_1 = <section id>`, `Result_Value_2 = <title path>/`. The explorer postback that follows does the move (explorer.md).
+
+## ObjectsSort.aspx?guid=<section id> – sort objects (verified 2026-11-10)
+
+GET lists the section's objects; POST `ctl00$Main$HiddenFieldForSave = <id>;<id>;…;` (new order, trailing `;`) + `ctl00$ButtonSaveExit`. Reply `Result_Status = SaveExit`; then explorer postback `ButtonObjectSort`.
+
+## G_RengerProvider/Templates.aspx?guid=<template id> – page templates
+
+Site page templates (Мастер, Шапка, Обычные …, listed by `RengerProvider.aspx?guid=Master|Head|Normal|Utility|JavaScript|CssPacked|ResourceString|Old|Actual|ExportToXml&gs=<GuidSession>`). Form: `ctl00$Main$TextBoxTitle_text` (name), `ctl00$Main$MasterList` (master template id), `ctl00$Main$Body_Content_<n>$TextBoxRes` (template HTML with `LoadModule(<id>,<name>)` calls), `ctl00$Main$HiddenFieldForSave` (attached scripts, e.g. `<js value="1023"/>`), `ctl00$Main$ClassifierL`, save `ctl00$ButtonSaveExit`.
+**Affects the whole site.** In the capture, saving 1024 «Базовый шаблон» unchanged still rewrote it: the editor put each `LoadModule(...)` on its own line and filled `HiddenFieldForSave`. Never save a template from a tool without explicit user request.
 
 ## Other dialogs (referenced in JS, not explored)
 
-`ClassifierLang.aspx?lang=`, `ClassifierMove.aspx?guid=`, `ObjectsSort.aspx?guid=`, `DirectLink.aspx?guid=`, `/G_All/SelectClassifier.aspx?guid=`, `/G_RengerProvider/Controls.aspx?guid=`, `/G_RengerProvider/Templates.aspx?guid=`, `RengerProvider.aspx?guid=Master|Head|Normal|NotUseTemplate|404|Actual&gs=<GuidSession>` (template rendering).
+`ClassifierLang.aspx?lang=`, `DirectLink.aspx?guid=`, `/G_RengerProvider/Controls.aspx?guid=`, `RengerProvider.aspx?guid=NotUseTemplate|404`.
