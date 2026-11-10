@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlsplit
 
 import httpx
 import typer
@@ -250,9 +251,23 @@ def proxy_pac(
 
 @app.command("browse")
 def browse(
-    url: Annotated[str | None, typer.Argument(help="Page to open, default EDU_LOGIN_URL.")] = None,
+    url: Annotated[
+        str | None,
+        typer.Argument(
+            help="Page to open. Default: the constructor if the saved session is valid, "
+            "else the login page."
+        ),
+    ] = None,
+    login: Annotated[
+        bool,
+        typer.Option(
+            "--login",
+            help="Open the login page (site, login, password filled from .env; you solve the "
+            "captcha). The window stays open; the new session is saved.",
+        ),
+    ] = False,
     save_session: Annotated[
-        bool, typer.Option(help="Save site cookies to the session when the browser closes.")
+        bool, typer.Option(help="Save site cookies to the session while the browser runs.")
     ] = True,
     har: Annotated[
         str | None,
@@ -263,8 +278,10 @@ def browse(
     ] = None,
     proxy: ProxyOpt = None,
 ) -> None:
-    """Open any *.edu.by site in a desktop browser through the configured proxy."""
+    """Open a desktop browser with edu.by routed through the proxy, logged in with the
+    saved session (or on the prefilled login form)."""
     from edu_by.browser import (
+        add_session_cookies,
         attach_login_prefill,
         check_browser_proxy,
         is_edu_by,
@@ -273,33 +290,57 @@ def browse(
     )
 
     s = _settings(proxy)
-    url = url or s.login_url
+    try:
+        check_browser_proxy(s)
+    except ValueError as e:
+        _fail(str(e))
+    use_session = not login and s.cookies_file.exists()
+    if login:
+        url = s.login_url
+    elif not url:
+        valid = False
+        if use_session:
+            try:
+                valid = sess.check(s).valid
+            except (sess.SessionError, httpx.HTTPError):
+                valid = False
+        url = s.constructor_url if valid else s.login_url
+        typer.echo(
+            "Saved session is valid – opening the constructor."
+            if valid
+            else "No valid session – opening the login page (fields from .env)."
+        )
     if "://" not in url:
         url = "https://" + url
     if not is_edu_by(url):
         typer.secho(f"{url} is not under edu.by – it will open without the proxy.", fg="yellow")
     typer.echo(f"Proxy: {mask_proxy(s.effective_proxy)}. Close the browser window to finish.")
-    try:
-        check_browser_proxy(s)
-    except ValueError as e:
-        _fail(str(e))
     recorder = None
     if har:
         from edu_by import har as har_mod
 
         recorder = har_mod.Recorder(s.session_dir / "har" / har, is_edu_by)
         typer.echo(f"Recording edu.by traffic to {recorder.clean_path} (+ raw, never share it)")
-    on_cookies = (lambda c: sess.save_cookies(s, c)) if save_session else None
+    constructor_path = urlsplit(s.constructor_url).path.lower()
+    saved: list[int] = []
     with open_browser(s) as context:
+
+        def on_cookies(cookies: list[dict]) -> None:
+            # Only a logged-in browser (constructor page open) may replace the CLI session:
+            # the login page's fresh cookies would otherwise overwrite a valid one.
+            if any(urlsplit(p.url).path.lower() == constructor_path for p in context.pages):
+                saved.append(sess.save_cookies(s, cookies))
+
         if recorder:
             recorder.attach(context)
+        if use_session:
+            add_session_cookies(context, s)
         attach_login_prefill(context, s)
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(url)
-        cookies = run_until_closed(context, on_cookies=on_cookies)
-    if save_session and cookies:
-        n = sess.save_cookies(s, cookies)
-        typer.echo(f"Saved {n} site cookie(s) to {s.cookies_file}")
+        run_until_closed(context, on_cookies=on_cookies if save_session else None)
+    if saved:
+        typer.echo(f"Saved {saved[-1]} site cookie(s) to {s.cookies_file}")
     if recorder:
         out = recorder.finish()
         typer.echo(f"Recorded {recorder.count} request(s). Sanitized HAR: {out}")
@@ -473,12 +514,21 @@ def tree(
 
 
 @app.command("objects")
-def objects(section: SectionArg, as_json: JsonOpt = False, proxy: ProxyOpt = None) -> None:
-    """List the objects (content items) of a section, all pages."""
+def objects(
+    section: SectionArg,
+    pages: Annotated[
+        int | None,
+        typer.Option(help="Read only the first N list pages (big news archives), default all."),
+    ] = None,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """List the objects (content items) of a section in their order, all pages by default."""
     from dataclasses import asdict
 
     with _site(proxy) as site:
-        rows = site.explorer().objects(section)
+        ex = site.explorer()
+        rows = ex.objects(section) if pages is None else ex.objects(section, max_pages=pages - 1)
     if as_json:
         _print_json([asdict(r) for r in rows])
         return
@@ -524,8 +574,9 @@ def object_show(
         page = dialogs.open_dialog(site.client, site.base_url, EDITOR_PATH, object_id)
         obj = parse_object_editor(object_id, page.html)
         editable = editable_fields(page.fields)
+        values = {k: page.fields.get(f"ctl00$Main${k}", "").strip("\r\n") for k in editable}
     if as_json:
-        _print_json({**asdict(obj), "editable_fields": editable})
+        _print_json({**asdict(obj), "editable_fields": editable, "fields": values})
         return
     for key in (
         "id",
@@ -540,11 +591,14 @@ def object_show(
     ):
         typer.echo(f"{key:>13}: {getattr(obj, key)}")
     typer.echo(f"{'editable':>13}: {', '.join(editable)}")
-    typer.echo("-- text --")
-    typer.echo(obj.text)
-    if obj.dop.strip():
-        typer.echo("-- dop --")
-        typer.echo(obj.dop)
+    for k, v in values.items():
+        if k == "Tags" or not v.strip():
+            continue
+        if "\n" in v or len(v) > 80:
+            typer.echo(f"-- {k} --")
+            typer.echo(v)
+        else:
+            typer.echo(f"{k:>13}: {v}")
 
 
 SetOpt = Annotated[
@@ -687,7 +741,13 @@ def object_sort(
 @object_app.command("upload")
 def object_upload(
     object_id: str,
-    file: Annotated[Path, typer.Argument(help="Image file (≤ ~300 000 bytes).")],
+    file: Annotated[Path, typer.Argument(help="Image file (≤ ~300 000 bytes, or use --shrink).")],
+    shrink: Annotated[
+        bool,
+        typer.Option(
+            "--shrink", help="Re-encode a bigger photo as JPEG under the limit first (≤1600 px)."
+        ),
+    ] = False,
     yes: YesOpt = False,
     token: TokenOpt = None,
     as_json: JsonOpt = False,
@@ -696,6 +756,15 @@ def object_upload(
     """Upload an image into an image object (type 304) or a news item."""
     from edu_by.api import objects_write as ow
 
+    if shrink:
+        settings = _settings(proxy)
+        try:
+            small = ow.shrink_image(file, settings.session_dir / "upload")
+        except ow.WriteError as e:
+            _fail(str(e))
+        if small != file:
+            typer.echo(f"Shrunk {file.name}: {file.stat().st_size} B -> {small.stat().st_size} B")
+        file = small
     with _site(proxy) as site:
         _run(site, ow.plan_upload_image(site, object_id, file), yes, token, as_json)
 

@@ -27,16 +27,18 @@ Follow-ups:
 - [ ] `edu objects --type` / `--search` (the list has a title/content search: `ctl00$Main_Right$SS_text`, `SS_Button`, `SS_Button2` – not captured yet).
 - [ ] Trash views (`sNodeTrashe\<group>\<id+1>`) and object-type views (`sNodeTemplate…`) as object lists.
 
-## 3. Write operations with confirmation – code done 2026-11-10, live test pending
+## 3. Write operations with confirmation – done 2026-11-10
 
-Planned writes in `api/` (`changes.Change`: plan reads only, returns before/after, level and a token; `apply()` writes and re-reads) and CLI commands: `edu object set|publish|unpublish|add|copy|move|sort|upload|trash`, `edu section add|set|move|delete`, `edu trash restore|purge` (+ reads `object show`, `section show`, `trash list`). Preview by default, `--yes` applies, delete level needs `--token` from the preview. Unit tests on a fake constructor (`tests/test_write.py`). All previews were run read-only on the live site (2026-11-10).
+Planned writes in `api/` (`changes.Change`: plan reads only, returns before/after, level and a token; `apply()` writes and re-reads) and CLI commands: `edu object set|publish|unpublish|add|copy|move|sort|upload|trash`, `edu section add|set|move|delete`, `edu trash restore|purge` (+ reads `object show`, `section show`, `trash list`). Preview by default, `--yes` applies, delete level needs `--token` from the preview. Unit tests on a fake constructor (`tests/test_write.py`).
 
-- [ ] **Live test of apply** – needs the owner's explicit go-ahead (the auto-mode guard refused live writes without it). Plan: `edu section add 1011 --title "Тест инструментов (удалить)" --unprotected --yes`, then in it: `object add --type 524 --set name=…`, `object set` text, `publish` / `unpublish`, `copy`, `sort`, `object add --type 304` + `upload` (small PNG), `move` between two test subsections, `section set`, `section move`, `object trash`, `trash restore`, `trash purge` of the test objects only, `section delete`. Fix whatever the re-read checks report, note results in `knowledge/`.
-- [ ] Unverified pieces to watch in that test: result of the ClassifierMove buttons (no `Result_Status` seen in the capture – the move is checked by re-reading the tree), `IsDelClassifier` counts after `section delete` planning, the news date `dt_text` with its `_ClientState`, `object copy` new id found by list diff.
+- [x] **Live test of apply** (2026-11-10, owner's go-ahead): test section 59801 «Тест инструментов (удалить)» under 1011 with subsections 59811 / 59821 – every command applied and verified, then sections deleted and the 3 test objects purged. News test in 59831 «Тест новости (удалить)»: 534 with `dt_text`, `zag`, `name`, `txt`, picture upload, date change – verified, then deleted and purged.
+- [x] Fixed on the way: a text that is one bare `<p>…</p>` is stored without the tags (the check now accepts it); `object show` prints all editable field values; `objects --pages N`; `object upload --shrink` (Pillow).
+- [x] Confirmed: ClassifierMove buttons (checked by the new parent), `IsDelClassifier` counts, the news date `dt_text` without touching its `_ClientState`, `object copy` id by list diff (ids are reused: copy got 6713).
+- Left in the 524 / 304 trash: empty objects 126733, 126723 and others from earlier captures – not purged (not named by the owner).
 
-## 4. Skills for agents – `.claude/skills/`
+## 4. Skills for agents – done 2026-11-10
 
-One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sections and objects), `edu-edit-content`, `edu-publish-news`, `edu-upload-file`. Each says when to use it, its inputs, exact commands, how to verify, and what to do on common errors.
+`.claude/skills/`: `edu-session`, `edu-find-content` (read), `edu-edit-content` (text, publish, objects, sections, trash), `edu-publish-news` (news with photos as unpublished 304 objects in `txt`), `edu-upload-file` (images with `--shrink`, documents as 734 link cards). To do later: a design skill once task 5a has CLI commands (style sets, ClearCache) – design writes are site-wide and not exposed yet.
 
 ## 5. MCP server – ready to implement
 
@@ -44,7 +46,7 @@ Design: [`docs/mcp.md`](docs/mcp.md) (tools, the preview/`confirm_token` contrac
 - [ ] `src/edu_by/mcp_server.py` + `edu mcp`, tools as in docs/mcp.md
 - [ ] tests with the in-memory MCP client and `fake_site`
 - [ ] `.mcp.json` for Claude Code; read tools allowed, write tools on "ask"
-- [ ] live smoke test after task 3's live test
+- [ ] live smoke test (task 3's CLI test passed; repeat through the MCP tools)
 
 ## 5a. Site design refresh (in progress)
 
@@ -67,7 +69,7 @@ Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (33
 
 - [x] Repo setup, Docker runtime, `./edu` wrapper, proxy modes (direct over `wlo1`, Shadowsocks), proxy only for edu.by
 - [x] Session: captcha login with `.env` prefill, import, check (`IsSession`), keepalive
-- [x] `browse` desktop Chromium, live HAR recording and sanitizer, `har summary`
+- [x] `browse` desktop Chromium (saved session or prefilled login, `--login`), live HAR recording and sanitizer, `har summary`
 - [x] First capture mapped: login, data model, explorer postbacks, dialogs, SystemWJG (`knowledge/`)
 - [x] Security level investigated (Hight / Medium / Low), default Hight
 - [x] Read-only API and CLI: tree, objects, object, types (task 2)
