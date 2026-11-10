@@ -357,13 +357,20 @@ def _session_ok(s: Settings) -> bool:
         return False
 
 
+@contextlib.contextmanager
 def _explorer(s: Settings, client: httpx.Client):
+    """An explorer that knows section paths from `.session/tree-<site>.json` and adds to it."""
+    from edu_by.api import treecache
     from edu_by.api.explorer import Explorer
 
     ex = Explorer.open(client, s.constructor_url, delay=s.request_delay)
+    ex.cached = treecache.load(s)
     if sys.stderr.isatty() or s.verbose:
         ex.on_request = lambda n, what: typer.echo(f"[{n}] {what}", err=True)
-    return ex
+    try:
+        yield ex
+    finally:  # keep what was learned even if the command failed half-way
+        treecache.save(s, ex)
 
 
 def _print_json(data) -> None:
@@ -389,8 +396,7 @@ def tree(
     proxy: ProxyOpt = None,
 ) -> None:
     """List the site's sections (classifiers) as a tree."""
-    with _site(proxy) as (s, client):
-        ex = _explorer(s, client)
+    with _site(proxy) as (s, client), _explorer(s, client) as ex:
         root_id = ex.find_section(root).id if root else None
         found = list(ex.walk(root_id, None if all_levels else depth))
     if as_json:
@@ -416,8 +422,8 @@ def objects(
     """List the objects (content items) of a section, all pages."""
     from dataclasses import asdict
 
-    with _site(proxy) as (s, client):
-        rows = _explorer(s, client).objects(section)
+    with _site(proxy) as (s, client), _explorer(s, client) as ex:
+        rows = ex.objects(section)
     if as_json:
         _print_json([asdict(r) for r in rows])
         return
@@ -469,8 +475,8 @@ def types(as_json: JsonOpt = False, proxy: ProxyOpt = None) -> None:
 
     from edu_by.api.explorer import types_from_tree
 
-    with _site(proxy) as (s, client):
-        found = types_from_tree(_explorer(s, client).nodes())
+    with _site(proxy) as (s, client), _explorer(s, client) as ex:
+        found = types_from_tree(ex.nodes())
     if as_json:
         _print_json([asdict(t) for t in found])
         return

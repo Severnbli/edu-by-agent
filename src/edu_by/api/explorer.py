@@ -222,6 +222,10 @@ class Explorer:
     pager_html: str = ""
     sections: dict[str, Section] = field(default_factory=dict)
     on_request: Callable[[int, str], None] | None = None  # progress hook: (count, what)
+    cached: dict[str, Section] = field(
+        default_factory=dict
+    )  # paths from an earlier run (treecache)
+    stale: set[str] = field(default_factory=set)  # cached sections whose path no longer works
     max_requests: int = 3000  # safety stop for one command
     _requests: int = 0
 
@@ -362,6 +366,13 @@ class Explorer:
             return self.find_path([p for p in section_id.strip("/").split("/") if p])
         if section_id in self.sections:
             return self.sections[section_id]
+        hit = self.cached.get(section_id)
+        if hit is not None:
+            try:
+                return self.find_path(hit.path)
+            except ExplorerError:  # moved or deleted since it was cached: walk instead
+                self.stale.add(section_id)
+                self.cached.pop(section_id, None)
         for i, _ in enumerate(self.walk()):
             if section_id in self.sections:
                 return self.sections[section_id]
