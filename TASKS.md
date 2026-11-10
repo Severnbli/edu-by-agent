@@ -2,7 +2,7 @@
 
 Backlog for future sessions. Pick the top open task, keep work on `dev`, commit after each step, then update this file (tick the task, add what you learned to `knowledge/`). Read `CLAUDE.md` and `knowledge/README.md` first.
 
-Before any task that talks to the site: `./edu proxy up` (direct mode), then `./edu session check`. If the session is expired, ask the user to run `./edu session login` (site, login and password are prefilled from `.env`; they only solve the captcha). You can also start it yourself in the background and wait for it to finish.
+Before any task that talks to the site: `./edu proxy up` (direct mode; `EDU_INTERFACE` must name the uplink that is up – `wlo1` on Wi-Fi, `eno1` on cable), then `./edu session check`. If the session is expired, ask the user to run `./edu session login` (site, login and password are prefilled from `.env`; they only solve the captcha). You can also start it yourself in the background and wait for it to finish.
 
 ## 1. Capture the missing write flows (needs the user)
 
@@ -16,17 +16,14 @@ Ask the user to run `./edu browse --har edit-<date>` and do, on a **test section
 
 Then: check the sanitized capture for leaks (no cookie values or GuidSession UUIDs from the raw file), summarize it with `./edu har summary`, and extend `knowledge/endpoints/*.md`. Done when every action in the "Not captured yet" list in `knowledge/README.md` is documented.
 
-## 2. Read-only API layer – `src/edu_by/api/`
+## 2. Read-only API layer – done 2026-11-10
 
-Build on `edu_by.webforms.WebFormPage`. Never write.
-- `tree.py`: list sections as `{id, title, parent_id, path}` from explorer.aspx (`sNodeClassifier\...` links)
-- `objects.py`: list objects of a section (select the node via async postback, parse `#ListElements` rows: id, type label, title, published)
-- `object.py`: read one object via `G_Data/ObjectEditor.aspx?guid=` (name, text, dop, tags, status, languages)
-- `types.py`: object types from `G_Data/AddObject.aspx` (`gg` attributes)
-- Handle the quirk: selecting the already-current node returns an `error|500|` record – select another node first.
-- CLI: `edu tree`, `edu objects <section>`, `edu object <id>`, `edu types` (JSON output with `--json`)
-- Tests: parse saved HTML fixtures. Fixtures must be built from sanitized captures, with personal data replaced.
-Done when the commands work against the live site and their tests pass.
+`src/edu_by/api/explorer.py` (tree, sections, object list with paging, types) and `api/objects.py` (ObjectEditor read); CLI `edu tree [--root ID] [--depth N | --all]`, `edu objects <section>`, `edu object <id>`, `edu types`, all with `--json`. Progress goes to stderr (`EDU_VERBOSE=1` when not a TTY). Learned: the tree is lazy (one request per section to list it all), selecting a hidden or the current node gives `error|500|`; see `knowledge/endpoints/explorer.md`.
+
+Follow-ups:
+- [ ] Cache the section tree in `.session/tree.json` (with a timestamp) so `edu objects <id>` for a deep section needn't walk the tree each time; `--refresh` to rebuild.
+- [ ] `edu objects --type` / `--search` (the list has a title/content search: `ctl00$Main_Right$SS_text`, `SS_Button`, `SS_Button2` – not captured yet).
+- [ ] Trash views (`sNodeTrashe\<group>\<id+1>`) and object-type views (`sNodeTemplate…`) as object lists.
 
 ## 3. Write operations with confirmation
 
@@ -49,7 +46,7 @@ One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sect
 
 - [ ] Does `IsSession` or a GET of explorer.aspx reset the ~1 h idle timer? Keep one session idle >1 h and test; then fix `session keepalive` to use the cheapest request that works.
 - [ ] Does the security level change the idle timeout?
-- [ ] `ctl00$Main$CheckBoxStatusObject` – which state means published?
+- [x] `ctl00$Main$CheckBoxStatusObject` («Разрешить публикацию»): checked = published (2026-11-10)
 - [ ] Why preview requests to the public site host failed during the first capture (the site itself is reachable).
 - [ ] Language variants: field names for other languages (`title_<lang>`), `ClassifierLang.aspx`.
 
@@ -60,3 +57,4 @@ One skill per task, using the CLI from tasks 2–3: `edu-browse-site` (find sect
 - [x] `browse` desktop Chromium, live HAR recording and sanitizer, `har summary`
 - [x] First capture mapped: login, data model, explorer postbacks, dialogs, SystemWJG (`knowledge/`)
 - [x] Security level investigated (Hight / Medium / Low), default Hight
+- [x] Read-only API and CLI: tree, objects, object, types (task 2)

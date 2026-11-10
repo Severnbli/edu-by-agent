@@ -38,6 +38,14 @@ class Settings(BaseSettings):
     session_dir: Path = Path(".session")
     keepalive_minutes: float = 45
     timeout: float = 30
+    # Pause between consecutive requests of one command (be gentle with the server).
+    request_delay: float = 0.5
+    verbose: bool = False  # print each request of a command to stderr
+
+    @property
+    def base_url(self) -> str:
+        """Constructor root, e.g. https://wp.brest-region.edu.by (no trailing slash)."""
+        return self.constructor_url.rsplit("/", 1)[0]
 
     @property
     def shadowsocks_configured(self) -> bool:

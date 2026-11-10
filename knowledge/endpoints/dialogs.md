@@ -39,10 +39,12 @@ Fields (`ctl00$Main$…`):
 | `text` | main HTML content (textarea, rich editor `ctl00_Main_text`) |
 | `dop` | additional content (second editor, type-dependent) |
 | `Tags` | tags |
-| `CheckBoxStatusObject` (checkbox) | publication status (confirm meaning) |
+| `CheckBoxStatusObject` (checkbox) | «Разрешить публикацию» (allow publication): checked = published (verified) |
 | `Classifier` | parent section |
 | `ListLang$<n>` (checkbox) | languages the object is shown in |
 | `IsClearCache`, `HiddenTitleObject` | hidden helpers |
+
+Read-only parts (verified 2026-11-10 by GET, used by `edu object`): the type name is the bold text after «Тип:», the section path label is the `<span>` after the `Classifier` input (e.g. `Главная страница/…/`), `ctl00$Title_1` = `[<id>] Редактирование данных`, `ctl00$Title_2` contains a link to the public page `http://<site>/main.aspx?guid=<id>`, language checkboxes `ListLang$<n>` have `<label>`s (`Русский`, ...). `name` is labelled «Описание блока» (block description) for HTML blocks.
 
 Buttons: `ctl00$ButtonSave` (Сохранить и остаться, save and stay), `ctl00$ButtonSaveExit` (save and exit), `ctl00$ButtonExit` (exit without saving).
 Binary objects (images, files) embed `/G_All/BinaryFrame.aspx?guid=<object id>` for upload – **upload flow not captured yet**.

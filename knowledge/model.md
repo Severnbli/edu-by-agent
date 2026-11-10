@@ -1,6 +1,6 @@
 ---
 status: verified
-updated: 2026-11-09
+updated: 2026-11-10
 source: capture constructor-2026-11-09, read-only inspection of explorer.aspx / dialogs
 ---
 
@@ -50,4 +50,8 @@ The list is per site/instance – read it from `AddObject.aspx` (elements with a
 
 ## Publication
 
-Objects listed with CSS class `obj_not_published` are unpublished. In the object editor the published flag is the `ctl00$Main$CheckBoxStatusObject` checkbox (unverified which state means published – confirm with a capture).
+Objects listed with CSS class `obj_not_published` are unpublished. In the object editor the flag is the `ctl00$Main$CheckBoxStatusObject` checkbox labelled «Разрешить публикацию» (allow publication), under «Доступ:» (access): **checked = published** (verified 2026-11-10: a listed-published object has it checked, an `obj_not_published` one unchecked).
+
+## Object types in the tree
+
+The explorer tree lists types under «Шаблоны объектов» grouped by `Стандартные` (standard), `Системные` (system), `Не в группе` (ungrouped): node value `sNodeTemplate\<group>\<id>`. `edu types` reads them from there (no extra request). `AddObject.aspx` shows the types for creating in two blocks: `#ls2` (big tiles: 524, 534, 304) and `#ls1` (the rest of the standard ones).
