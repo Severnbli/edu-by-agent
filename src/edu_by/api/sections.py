@@ -173,6 +173,7 @@ def plan_move(site: Site, section_id: str, target_id: str, position: Position = 
         raise WriteError(f"position must be one of {', '.join(MOVE_TARGETS)}")
     ex = site.explorer()
     sec = ex.find_section(section_id)
+    section_id = sec.id  # the caller may pass an id path
     target = ex.find_section(target_id)
     if section_id in target.path:
         raise WriteError("a section can't be moved into itself or its own subsection")
@@ -231,6 +232,7 @@ def plan_delete(site: Site, section_id: str) -> Change:
     the section itself can't be restored. A protected section must be unprotected first."""
     ex = site.explorer()
     sec = ex.find_section(section_id)
+    section_id = sec.id  # the caller may pass an id path
     if sec.parent_id is None:
         raise WriteError("root sections are not deleted by this tool")
     props = read_section(site, section_id)
