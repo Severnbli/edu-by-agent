@@ -26,4 +26,4 @@ Raw and sanitized captures live in `.session/har/` (git-ignored). Excerpts copie
 
 There is no «copy section» action in the explorer toolbar (only add, move, delete sections).
 
-Restore from trash and the trash view, saving a section's template (`fk_Template`; field and options known), design import from archive, the two analysers, document upload (type 734) and its size limit, menu changes.
+Saving a section's template (`fk_Template`; field and options known), design import from archive, the two analysers, menu changes.
