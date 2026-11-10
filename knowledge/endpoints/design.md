@@ -1,7 +1,7 @@
 ---
 status: partially verified
 updated: 2026-11-10
-source: read-only GETs of RengerProvider.aspx and G_RengerProvider/* (2026-11-10), public pages of the site, capture edit-2026-11-10
+source: capture design-2026-11-10, read-only GETs of RengerProvider.aspx and G_RengerProvider/* (2026-11-10), public pages of the site, capture edit-2026-11-10
 ---
 
 # Site design (RengerProvider)
@@ -33,6 +33,23 @@ Items are links calling `Open('<dialog>', this, '<id>')`, which opens `/G_Renger
 Form: `ctl00$Title_1 = [<id>] Редактирование набора стилей` (editing a style set), CSS text in `ctl00$Main$TextBoxBody`. Public pages link the sets a template uses, in order: `<link href='css.aspx?guid=<id>' rel='stylesheet' data-name='<set name>'/>`. Saving a set is **not captured yet**.
 
 Templates attach scripts through `ctl00$Main$HiddenFieldForSave` (`<js value="<id>"/>` list, see dialogs.md). How a template chooses its style sets is not known yet.
+
+## Add / copy / delete style sets and scripts (verified, capture design-2026-11-10)
+
+On the category page (`RengerProvider.aspx?guid=CssPacked&gs=…` or `?guid=JavaScript&gs=…`) a plain postback with `__EVENTTARGET` =
+- `ctl00$ContentSecondMenu$CSSAdd` / `JSAdd` – create a new empty item (seen ids 1292 CSS, 1293 JS);
+- `ctl00$ContentSecondMenu$CSSCopy` / `JSCopy` + `ctl00$Result_Value = <id>` – copy that item (1292 → 1302, 1293 → 1303);
+- `ctl00$ContentSecondMenu$CSSDel` / `JSDel` + `ctl00$Result_Value = <id>` – delete it.
+
+The item editor (`G_RengerProvider/CssPacked.aspx?guid=<id>`, `JavaScript.aspx?guid=<id>`) saves its text in `ctl00$Main$TextBoxBody` and name in `ctl00$Main$TextBoxName_text` with the usual `ctl00$ButtonSave` / `ButtonSaveExit`.
+
+## Attaching CSS / JS to a template
+
+`G_RengerProvider/Templates.aspx` keeps the attached sets in `ctl00$Main$HiddenFieldForSave`, e.g. `<css value="1002"/><css value="1012"/><css value="1022"/><js value="1073"/>`. **The GET returns it empty – the page's JS fills it from the list on screen before saving**, so a tool must build it from the visible list, never post the GET value (that would detach all styles). Order = load order, so a new set appended last overrides the old ones.
+
+Same for Controls (`G_RengerProvider/Controls.aspx`): `ASD_ClassifierList` / `ListClasifier` are empty in the GET and filled by JS (`1441;` for the guestbook form 2971).
+
+Saving a template unchanged also re-spaces `LoadModule(...)` calls (adds a space or newline between them) – harmless, but it shows up as a change.
 
 ## Low-vision mode (version for the visually impaired)
 
