@@ -52,10 +52,10 @@ Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (33
 - [ ] consider applying the redesign through «Импорт из архива» (new prefixed items) instead of editing live ones – needs a test on a copy
 - [ ] user approves the prototype (or asks for changes)
 - [x] capture: create / copy / delete / save a style set and a script, save a module and a template with `HiddenFieldForSave` – all in design-2026-11-10 (design.md)
-- [x] feasibility of the redesign prototype (2026-11-10): templates are free HTML, every module's output markup is in its settings (menus, news lists, breadcrumbs, languages – design.md «Module output markup»), so the layout is reachable; web fonts can't be uploaded (external or system font); the site has ru / be only
+- [x] feasibility of the redesign prototype (2026-11-10): templates are free HTML, every module's output markup is in its settings (menus, news lists, breadcrumbs, languages – design.md «Module output markup»), so the layout is reachable; web fonts can't be uploaded (external or system font); languages are Google Translate (module 2561), not real versions
 - [x] direct POST of an HTML block keeps all markup, `<style>` / `<svg>` / `<script>` included (2026-11-10, test 126743 in 59861, cleaned up; design.md)
 - [x] public rendering of such a block: byte for byte, CSS / JS / web font work (test page 59871 «Тест редизайна (удалить)» under 1011 with template 1164, block 126743 – **delete after the owner's verdict**)
-- [ ] prototypes: drop ENG (the site has ru / be only)
+- [x] prototypes: ENG dropped (2026-11-10, holst v7); decide with the owner whether to keep the Google Translate switcher (РУС / БЕЛ / АНГ, module 2561) or show only РУС / БЕЛ
 - [ ] CLI / MCP: plan-based writes for style sets, scripts and module settings (`Controls.aspx` `ASD_*`), template body; never post `HiddenFieldForSave` from the GET
 - [ ] apply, ClearCache, check public pages and low-vision mode; rollback plan ready
 

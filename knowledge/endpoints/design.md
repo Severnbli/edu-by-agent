@@ -52,7 +52,7 @@ Modules don't have fixed HTML: each one keeps its markup in its settings. `Contr
 | `WJG.Core_NavigationUniversal` (main menu 2601, section menu 2791, breadcrumbs 2801, page title 2491/2811, site map 3011) | `BlockStart`, `BlockEnd`, `m_BlockStart` / `m_BlockEnd` (per level, e.g. `<ul class="[[class]]">`), `m_ItemStart` / `m_ItemEnd`, `m_a` (link), `m_select` (current item); what it lists: `Status`, `D_Status`, `D_ClassifierList`, `D_Level` (depth), `D_Parent` | `[[url]]`, `[[title]]`, `[[class]]`, `[[guid]]` |
 | `WJG.Core_MenuEasy`, `MenuEasy2` (old menus) | `ASD_LinkStyle`, `ASD_LinkSpan`, `ASD_Separator`, `ASD_ClassFirst` / `Link`, `LinkSelect`, `BlockStart`, `BlockEnd` | `[[guid]]`, `[[title]]` |
 | `WJG.Core_ListObject` (lists of objects, e.g. 1021 the home HTML block, 1101 news) and `WJG.Core_ArxiwEasy` (archives, e.g. 3001 news) | `Format` – XSLT-like template of one item; `TemplateObjectList` / `TemplateObject` (object type), `ClassifierList`, paging `page_*` | `<%V(<field>)%>`, `<%WRITE(…)%>`, `<%G_OBJ%>` (object id), `WJG:FormatDate(<%V(dt)%>,'ShortDate')`, `<xsl:attribute>` |
-| `WJG.Core_Lang` (2551 on this site) | `Lang_<n>` (code), `LangNo_<n>` / `LangYes_<n>` (HTML of a not-chosen / chosen language) | – |
+| `WJG.Core_Lang` (2551 on this site, not used – `WhereUse=0`) | `Lang_<n>` (code), `LangNo_<n>` / `LangYes_<n>` (HTML of a not-chosen / chosen language) | – |
 | `WJG.Core_Way` (1071) | `BlockStart`, `Separator`, `ShowActiveClassifier` | – |
 | `WJG.Core_Tab` (tabs, e.g. 2711) | `Theme`, `ThemeUser`, `Str<n>` (tab title), `GuidControl<n>` (module in the tab) | – |
 | `WJG.Core_Head` (1611, «Данные в блок head») | `ASD_Str` (HTML put into `<head>`), `ASD_KeyWords` | – |
@@ -75,7 +75,7 @@ The home block 1063 (type 524, saved through the editor) keeps `class` (`content
 
 ## This site's live design (one site, 2026-11-10)
 
-Master 1144 «Загрузка от 25.08.2025. Основной мастер шаблон» (Главный 1154, Обычный 1164, 404 1174 use it) – CSS 1212–1282 (8 sets), JS 1203–1283 (9). Languages in module 2551: **ru and be only** (`<span>РУС</span>`, `<span>БЕЛ</span>`), no English version (`main.aspx?lang=en` and `?lang=be` return the same 141 994-byte page; the home block 1063 has only «Русский» among its languages). Adding `en` to the module is easy, but pages would be empty without translated content.
+Master 1144 «Загрузка от 25.08.2025. Основной мастер шаблон» (Главный 1154, Обычный 1164, 404 1174 use it) – CSS 1212–1282 (8 sets), JS 1203–1283 (9). Languages: the live РУС / БЕЛ / АНГ switcher is **Google Translate**, not the constructor's language versions – module 2561 (`WJG.Core_Html`, «Google translate -при активации отключить модуль Список языков», an obfuscated script) in master 1144; the language module 2551 (ru, be) is not used (`WhereUse=0`). So БЕЛ and АНГ are machine translations of the Russian pages: `main.aspx?lang=en` / `?lang=be` return the same page, and the home block 1063 has only «Русский». Real language versions would need translated content in the constructor.
 
 ## Attaching CSS / JS to a template
 
