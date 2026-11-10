@@ -52,6 +52,7 @@ New objects and copies are **unpublished**. Publish them once the user has check
 ./edu section set 1001/1041/1201 --title "Новое название" --yes
 ./edu section move 1001/1041/1201 --to 1001/1041/1211 --position above   # above | inside | below
 ./edu section set 1001/1041/1201 --unprotect --yes          # needed before a delete
+./edu section set 1011/59871 --template 1164 --yes          # page template (0 = inherit); the preview lists the offered ids on error
 ./edu section delete 1001/1041/1201                          # preview → --token …
 ```
 

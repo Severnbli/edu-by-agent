@@ -1,7 +1,8 @@
 """Planned writes on sections (classifiers): add, edit properties, move, delete.
 
 Requests from knowledge/endpoints/explorer.md (section toolbar) and dialogs.md
-(ClassifierEditor, ClassifierMove). Page templates (`fk_Template`) are not changed here.
+(ClassifierEditor, ClassifierMove). A section's page template is `fk_Template`, a select
+whose options are the «Обычный» templates (`0` = inherit / default).
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ EDITOR_PATH = "/G_Data/ClassifierEditor.aspx"
 MOVE_PATH = "/G_Data/ClassifierMove.aspx"
 MAIN = "ctl00$Main$"
 PROTECT = MAIN + "IsDelete"
+TEMPLATE = MAIN + "fk_Template"
 TITLE_ON = MAIN + "title_ru_status"
 NEW_NAME = "New"  # a fresh section's internal name
 Position = Literal["above", "inside", "below"]
@@ -42,13 +44,26 @@ def _props(section_id: str, f: dict[str, str]) -> dict:
         "title": f.get(MAIN + "title_ru", ""),
         "title_enabled": TITLE_ON in f,
         "protected": PROTECT in f,
-        "template": f.get(MAIN + "fk_Template", ""),
+        "template": f.get(TEMPLATE, ""),
         "redirect": f.get(MAIN + "StatusDirectLink", ""),
         "tags": f.get(MAIN + "Tags", ""),
     }
 
 
-def _apply_props(fields: dict[str, str], title, name, protected, tags) -> None:
+def template_options(html: str) -> dict[str, str]:
+    """The `fk_Template` select: template id -> label, as the editor offers them."""
+    m = re.search(r'<select[^>]*name="ctl00\$Main\$fk_Template".*?</select>', html, re.S)
+    if not m:
+        return {}
+    return {
+        v: label.strip()
+        for v, label in re.findall(r'<option[^>]*value="([^"]*)"[^>]*>([^<]*)', m.group(0))
+    }
+
+
+def _apply_props(fields: dict[str, str], title, name, protected, tags, template=None) -> None:
+    if template is not None:
+        fields[TEMPLATE] = template
     if title is not None:
         fields[MAIN + "title_ru"] = title
     if name is not None:
@@ -61,8 +76,9 @@ def _apply_props(fields: dict[str, str], title, name, protected, tags) -> None:
         fields.pop(PROTECT, None)
 
 
-def _diff(before: dict, title, name, protected, tags) -> dict:
+def _diff(before: dict, title, name, protected, tags, template=None) -> dict:
     want = {"title": title, "name": name, "protected": protected, "tags": tags}
+    want["template"] = template
     return {k: (before[k], v) for k, v in want.items() if v is not None}
 
 
@@ -73,12 +89,20 @@ def plan_update(
     name: str | None = None,
     protected: bool | None = None,
     tags: str | None = None,
+    template: str | None = None,
 ) -> Change:
-    """Edit a section's title (Russian), internal name, delete protection or tags."""
+    """Edit a section's title (Russian), internal name, delete protection, tags or
+    page template (an `fk_Template` option id, `0` = inherit)."""
     page = dialogs.open_dialog(site.client, site.base_url, EDITOR_PATH, section_id)
     before = _props(section_id, page.fields)
-    fields = _diff(before, title, name, protected, tags)
+    fields = _diff(before, title, name, protected, tags, template)
     notes = []
+    if template is not None:
+        options = template_options(page.html)
+        if template not in options:
+            known = ", ".join(f"{k} {v}" for k, v in options.items())
+            raise WriteError(f"template {template!r} is not offered for this section ({known})")
+        notes.append(f"the page is shown with «{options[template]}» – its public look changes")
     if title is not None:
         notes.append("the title shows in the site menu and page headings at once")
     if protected is False:
@@ -86,7 +110,7 @@ def plan_update(
 
     def do() -> dict:
         with site.lock:
-            _apply_props(page.fields, title, name, protected, tags)
+            _apply_props(page.fields, title, name, protected, tags, template)
             res = dialogs.submit(page, dialogs.SAVE_EXIT)
             if res.status != "SaveExit":
                 raise WriteError(f"save of section {section_id} not confirmed: {res.status!r}")
@@ -99,10 +123,17 @@ def plan_update(
     return Change(
         "section.update",
         f"section {section_id} «{before['title'] or before['name']}»",
-        "publish" if title is not None else "edit",
+        "publish" if title is not None or template is not None else "edit",
         fields,
         notes,
-        {"id": section_id, "title": title, "name": name, "protected": protected, "tags": tags},
+        {
+            "id": section_id,
+            "title": title,
+            "name": name,
+            "protected": protected,
+            "tags": tags,
+            "template": template,
+        },
         do,
     )
 
