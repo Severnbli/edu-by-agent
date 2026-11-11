@@ -45,19 +45,14 @@ Planned writes in `api/` (`changes.Change`: plan reads only, returns before/afte
 `edu mcp` (`src/edu_by/mcp_server.py`), design and contract in [`docs/mcp.md`](docs/mcp.md): 8 read and 13 write tools (preview, then `confirm_token`), the skills' `mcp.md` as prompts, `knowledge/` as resources; `.mcp.json`; `tests/test_mcp.py`. Live-tested through a stdio client on a test section (since deleted). Fixed on the way: section move / delete with an id path, the create preview shows the field values, create reports fields that didn't save.
 - [ ] Claude Code permissions: allow the read tools (`mcp__edu-by__edu_session_status`, `…edu_tree`, `…edu_find_section`, `…edu_section`, `…edu_objects`, `…edu_object`, `…edu_types`, `…edu_trash_list`) in `.claude/settings.json`, keep writes on "ask" – the owner adds them (an agent may not change its own permissions).
 
-## 5a. Site design refresh (in progress)
+## 5a. Site design refresh
 
-Backup of all design items (read-only): `.session/design/backup-2026-11-10/` (338 items, `index.json`). Prototype: `.session/design/prototype/` (`modern.src.css` → `build.py` → `modern.css`, screenshots, `compare.html`). Plan: add the style as **one new style set** loaded last, so rollback = detach it. Next:
-- [x] full design export via «Экспорт в архив» (2026-11-10, user-approved): `.session/design/export/download_-888.zip`, decoded to `decoded/` (format in design.md)
-- [ ] consider applying the redesign through «Импорт из архива» (new prefixed items) instead of editing live ones – needs a test on a copy
-- [ ] user approves the prototype (or asks for changes)
-- [x] capture: create / copy / delete / save a style set and a script, save a module and a template with `HiddenFieldForSave` – all in design-2026-11-10 (design.md)
-- [x] feasibility of the redesign prototype (2026-11-10): templates are free HTML, every module's output markup is in its settings (menus, news lists, breadcrumbs, languages – design.md «Module output markup»), so the layout is reachable; web fonts can't be uploaded (external or system font); languages are Google Translate (module 2561), not real versions
-- [x] direct POST of an HTML block keeps all markup, `<style>` / `<svg>` / `<script>` included (2026-11-10, test 126743 in 59861, cleaned up; design.md)
-- [x] public rendering of such a block: byte for byte, CSS / JS / web font work (test page 59871 «Тест редизайна (удалить)» under 1011 with template 1164, block 126743 – **delete after the owner's verdict**)
-- [x] prototypes: ENG dropped (2026-11-10, holst v7); decide with the owner whether to keep the Google Translate switcher (РУС / БЕЛ / АНГ, module 2561) or show only РУС / БЕЛ
-- [ ] CLI / MCP: plan-based writes for style sets, scripts and module settings (`Controls.aspx` `ASD_*`), template body; never post `HiddenFieldForSave` from the GET
-- [ ] apply, ClearCache, check public pages and low-vision mode; rollback plan ready
+The plan and status of one school's redesign are site data and live in the git-ignored `.session/notes/` (see CLAUDE.md «Site data»). Constructor-side work:
+- [x] design tools: `edu design list|show|set|copy|add|delete|export`, `edu cache clear`, MCP `edu_design_*`, skill `edu-design` (2026-11-11)
+- [x] a template save keeps its sections (`ClassifierL`), module «Язык» boxes, module checkboxes (2026-11-11)
+- [ ] module section lists (`ASD_ClassifierList`, …) are kept, not settable
+- [ ] consider applying a redesign through «Импорт из архива» (new prefixed items) – needs a test on a copy
+- [ ] find how the home page picks one of several «Главный» templates
 
 ## 6. Open questions (small, any time)
 

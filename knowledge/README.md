@@ -19,6 +19,8 @@ Facts about the edu.by site constructor, taken from real traffic only. Each file
 | constructor-2026-11-09 | 2026-11-09 | login; tree browsing; system templates view; add section under 1051, rename, add HTML block object, delete it, remove delete protection, delete the section |
 | edit-2026-11-10 | 2026-11-10 | add sections, rename, move a section (above / inside / below), create 5 HTML blocks, save text (stay / exit), copy objects, move an object to another section, sort, move to trash, create a news item and an image object, open upload dialogs, delete sections, open and save page templates, ClearCache |
 | publish-2026-11-10 | 2026-11-10 | add section, add HTML block, publish it, unpublish it |
+| design-2026-11-10 | 2026-11-10 | create / copy / delete / save a style set and a script, save a module and a template |
+| design2-2026-11-11 | 2026-11-11 | copy and delete templates and a module (`TemplateCopy`, `TemplateDel`, `ControlCopy`, `ControlDel`), save a module copy, save master 1004 unchanged |
 
 Raw and sanitized captures live in `.session/har/` (git-ignored). Excerpts copied into `captures/` must come from the sanitized file.
 

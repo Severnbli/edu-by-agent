@@ -21,7 +21,7 @@ Everything goes through `./edu` from the repo root. Write commands only preview 
 ## Steps
 
 1. Session: `./edu session check` (exit 2 → the `edu-session` skill; the user logs in).
-2. Find the news section. On the example site it is **1031 «Архив новостей»**, path `1001/1431/1031`. On another site, look for it with `./edu tree --depth 2` or ask the user. Always pass the **ID path**: a bare id that isn't cached costs a walk of the whole tree. Check the existing format first:
+2. Find the news section. Usually «Архив новостей» (e.g. path `1001/1431/1031`); if `.session/notes/site.md` names it, use that, else look for it with `./edu tree --depth 2` or ask the user. Always pass the **ID path**: a bare id that isn't cached costs a walk of the whole tree. Check the existing format first:
    ```bash
    ./edu objects 1001/1431/1031 --pages 1
    ./edu object show <id of a recent news>      # dt_text, zag, name, txt – copy its HTML style
