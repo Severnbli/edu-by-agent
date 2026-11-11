@@ -36,6 +36,8 @@ Read tools (annotations `readOnlyHint: true`):
 | `edu_object(id)` | `objects.read_object` + `objects_write.editable_fields` | full HTML; the list of fields an update may set |
 | `edu_types` | `types_from_tree` | |
 | `edu_trash_list(type_id, page=0)` | `trash.list_trash` | |
+| `edu_design_list(category)` | `design.list_category` | templates, modules, CSS, JS, strings of a RengerProvider category |
+| `edu_design_item(kind, id, full=false)` | `design.read_item` | fields `edu_design_update` takes; template master and attached CSS / JS |
 
 Write tools – one per planned write, all with the same contract:
 
@@ -54,6 +56,11 @@ Write tools – one per planned write, all with the same contract:
 | `edu_section_delete(section)` | `sections.plan_delete` | delete |
 | `edu_trash_restore(type_id, ids, section)` | `trash.plan_restore` | edit |
 | `edu_trash_purge(type_id, ids)` | `trash.plan_purge` | delete, irreversible |
+| `edu_design_update(kind, id, values?, attach_css?, detach_css?, attach_js?, detach_js?)` | `design.plan_set` | publish – site-wide for an item in use |
+| `edu_design_copy(kind, id, name)` | `design.plan_copy` | edit – a new item, used nowhere yet |
+| `edu_design_create(kind, name, body)` | `design.plan_create` | edit – css / js only |
+| `edu_design_delete(kind, id, force=false)` | `design.plan_delete` | delete, immediate (no trash); «Редизайн…» / «Тест…» items only unless `force` |
+| `edu_cache_clear()` | `design.plan_clear_cache` | publish, harmless |
 
 **Contract** (the confirmation step of CLAUDE.md, same as the CLI's `--token`):
 
@@ -63,7 +70,7 @@ Write tools – one per planned write, all with the same contract:
 
 Annotations: `destructiveHint: true` for delete-level tools, `idempotentHint: false` for all writes, `openWorldHint: true` (live public site). Leave write tools on "ask" in Claude Code permissions; read tools may be allowed.
 
-Not exposed: page templates (`Templates.aspx` saves rewrite the site-wide template), design import, security/permissions, «select all» in the trash, login.
+Design writes (`edu_design_*`) rebuild the fields the page's JS fills before a save (template `HiddenFieldForSave` from the CSS / JS lists, module section lists) and refuse a template save when the lists can't be read. Not exposed: design export (CLI `edu design export`, a big download), design import, security/permissions, «select all» in the trash, login.
 
 ## Prompts and resources
 

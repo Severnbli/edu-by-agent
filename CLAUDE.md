@@ -29,7 +29,7 @@ src/edu_by/
   mcp_server.py           # MCP server: tools over api/, skills' mcp.md as prompts, knowledge/ as resources
   api/                    # one module per constructor area:
                           #   reads: explorer (tree, lists, types), objects, treecache (section paths)
-                          #   planned writes: changes (Change, token), dialogs, objects_write, sections, trash
+                          #   planned writes: changes (Change, token), dialogs, objects_write, sections, trash, design
 docs/mcp.md               # MCP server: tools, confirm_token contract, prompts, resources
 .mcp.json                 # registers `./edu mcp` for Claude Code
 knowledge/
@@ -66,6 +66,9 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu object set ID --set name=… # writes preview by default; --yes applies, delete level needs --token
 ./edu object upload ID FILE --shrink   # image ≤ 300 KB (re-encoded as JPEG if bigger)
 ./edu section add PARENT --title …   (also object add|copy|move|sort|upload|trash, section set|move|delete, trash restore|purge)
+./edu design list CAT | show KIND ID   # design reads; KIND = template|control|css|js|string
+./edu design set|copy|add|delete …     # design writes (site-wide!), on «Редизайн …» copies; `edu cache clear`
+./edu design export FILE.zip     # full design backup (read-only; the server's export fails now and then – retry later)
 ./edu mcp                        # MCP server on stdio (stdout = protocol, logs on stderr)
 ./edu test                       # pytest
 ./edu lint | fmt                 # ruff check / fix + format
@@ -114,6 +117,10 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 - Skills call the `edu` CLI (or the `edu_by` package). They don't hand-write curl with cookies. If a skill needs something the CLI lacks, add it to the CLI first.
 - Each skill's `SKILL.md`: when to use it, required inputs, exact commands, how to verify the result, and what to do on common errors (expired session, validation error). Its `mcp.md` says the same with MCP tool calls – keep the two in step (`tests/test_mcp.py` checks the pairing and the tool names).
 
+## Site data
+
+This repo is **public** and holds only what is true of the constructor itself: endpoints, fields, quirks, tools, skills. Anything about a particular school site – its host, e-mail, section / template / module ids as facts about that site, redesign plans and status, screenshots, content – goes to the git-ignored `.session/notes/` (`.session/notes/site.md`: plan, status, live facts; larger files under `.session/design/…`). Examples in tracked files use `sch1.example.edu.by`. Before committing, `git grep` the diff for the site's host and e-mail.
+
 ## Git
 
 - All work is committed directly on the `dev` branch – no feature branches. `main` is updated only through a pull request from `dev` to `main`.
@@ -128,5 +135,5 @@ edu.by may be reachable only from Belarusian IPs, so **edu.by traffic** (`edu.by
 
 ## Status
 
-Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | types`, shared `Site`, planned writes in `api/` with CLI commands (all live-tested 2026-11-10), `browse` with the saved session, skills `edu-find-content`, `edu-edit-content`, `edu-publish-news`, `edu-upload-file`, MCP server `edu mcp` (tools, prompts, resources; live-tested). Captures are mapped in `knowledge/`.
+Done: Docker runtime, `session` (login prefilled from `.env`, security level Hight), `proxy` (direct mode + Shadowsocks), `browse` (with live HAR recording) and `har` commands, WebForms helper (`edu_by.webforms`), `edu-session` skill, read-only `api/` + `edu tree | objects | types`, shared `Site`, planned writes in `api/` with CLI commands (all live-tested 2026-11-10), `browse` with the saved session, skills `edu-find-content`, `edu-edit-content`, `edu-publish-news`, `edu-upload-file`, MCP server `edu mcp` (tools, prompts, resources; live-tested), design reads / writes / export (`edu design`, `edu cache clear`, skill `edu-design`, live-tested 2026-11-11). Captures are mapped in `knowledge/`.
 **Next work is listed in [`TASKS.md`](TASKS.md)** – start there, and update it as you finish tasks.

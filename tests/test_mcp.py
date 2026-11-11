@@ -21,6 +21,8 @@ READS = {
     "edu_object",
     "edu_types",
     "edu_trash_list",
+    "edu_design_list",
+    "edu_design_item",
 }
 WRITES = {
     "edu_object_update",
@@ -36,6 +38,11 @@ WRITES = {
     "edu_section_delete",
     "edu_trash_restore",
     "edu_trash_purge",
+    "edu_design_update",
+    "edu_design_copy",
+    "edu_design_create",
+    "edu_design_delete",
+    "edu_cache_clear",
 }
 
 
@@ -73,7 +80,8 @@ def test_tools_and_annotations():
         a = tools[name].annotations
         assert a.readOnlyHint is False and a.idempotentHint is False
         assert a.destructiveHint is (
-            name in {"edu_object_trash", "edu_section_delete", "edu_trash_purge"}
+            name
+            in {"edu_object_trash", "edu_section_delete", "edu_trash_purge", "edu_design_delete"}
         )
         assert "confirm_token" in tools[name].inputSchema["properties"]
 

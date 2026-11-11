@@ -560,6 +560,123 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
             lambda site: _plan_or_apply(trash.plan_purge(site, type_id, ids), confirm_token)
         )
 
+    # ----- design (site-wide) -----
+
+    @tool(
+        "edu_design_list",
+        "Design items of a category",
+        READ,
+        "Items of a design category: Master | Head | Normal | 404 | NotUseTemplate (templates), "
+        "Actual | Old | NotUse (modules), CssPacked, JavaScript, ResourceString, TemplateGlobal.",
+    )
+    async def edu_design_list(category: str) -> dict:
+        from edu_by.api import design
+
+        return await run(lambda site: {"items": design.list_category(site, category)})
+
+    @tool(
+        "edu_design_item",
+        "Design item",
+        READ,
+        "One design item (`kind`: template | control | css | js | string): its fields – the "
+        "names `edu_design_update` takes – and for a template its master and attached CSS / JS. "
+        "`full` returns long values (HTML) in full.",
+    )
+    async def edu_design_item(kind: str, id: str, full: bool = False) -> dict:
+        from edu_by.api import design
+
+        return await run(lambda site: design.read_item(site, kind, id).summary(full=full))
+
+    @tool(
+        "edu_design_update",
+        "Change a design item",
+        _write("publish"),
+        "SITE-WIDE: save fields of a template / module / style set / script / resource string "
+        "(`values`: field -> new value, others keep theirs); for a template also attach (as "
+        "last) or detach style sets and scripts by id. Every page using the item changes at "
+        "once – prefer working on a copy." + CONTRACT,
+    )
+    async def edu_design_update(
+        kind: str,
+        id: str,
+        values: dict[str, str] | None = None,
+        attach_css: list[str] | None = None,
+        detach_css: list[str] | None = None,
+        attach_js: list[str] | None = None,
+        detach_js: list[str] | None = None,
+        confirm_token: str | None = None,
+    ) -> dict:
+        from edu_by.api import design
+
+        return await run(
+            lambda site: _plan_or_apply(
+                design.plan_set(
+                    site, kind, id, values, attach_css, detach_css, attach_js, detach_js
+                ),
+                confirm_token,
+            )
+        )
+
+    @tool(
+        "edu_design_copy",
+        "Copy a design item",
+        _write("edit"),
+        "«Создать копию» of a template / module / style set / script / resource string, named "
+        "`name` (e.g. «Редизайн 2026. …»). The copy is used nowhere yet." + CONTRACT,
+    )
+    async def edu_design_copy(
+        kind: str, id: str, name: str, confirm_token: str | None = None
+    ) -> dict:
+        from edu_by.api import design
+
+        return await run(
+            lambda site: _plan_or_apply(design.plan_copy(site, kind, id, name), confirm_token)
+        )
+
+    @tool(
+        "edu_design_create",
+        "New style set or script",
+        _write("edit"),
+        "A new style set (`kind` css) or script (js) with `name` and `body`; used nowhere "
+        "until a template attaches it (edu_design_update attach_css)." + CONTRACT,
+    )
+    async def edu_design_create(
+        kind: str, name: str, body: str = "", confirm_token: str | None = None
+    ) -> dict:
+        from edu_by.api import design
+
+        return await run(
+            lambda site: _plan_or_apply(design.plan_create(site, kind, name, body), confirm_token)
+        )
+
+    @tool(
+        "edu_design_delete",
+        "Delete a design item",
+        _write("delete"),
+        "IRREVERSIBLE (no trash): delete a design item. Only items named «Редизайн…» / «Тест…» "
+        "unless `force` – and force only for an item the user named." + CONTRACT,
+    )
+    async def edu_design_delete(
+        kind: str, id: str, force: bool = False, confirm_token: str | None = None
+    ) -> dict:
+        from edu_by.api import design
+
+        return await run(
+            lambda site: _plan_or_apply(design.plan_delete(site, kind, id, force), confirm_token)
+        )
+
+    @tool(
+        "edu_cache_clear",
+        "Clear the site cache",
+        _write("publish"),
+        "Clear the public site cache so pages are rebuilt from the current design (harmless)."
+        + CONTRACT,
+    )
+    async def edu_cache_clear(confirm_token: str | None = None) -> dict:
+        from edu_by.api import design
+
+        return await run(lambda site: _plan_or_apply(design.plan_clear_cache(site), confirm_token))
+
     # ----- prompts and resources -----
 
     for name, desc, text in skill_prompts():

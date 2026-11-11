@@ -53,7 +53,9 @@ class _FormParser(HTMLParser):
                 self.fields[self._select] = self._select_first
             self._select = None
         elif tag == "textarea" and self._textarea:
-            self.fields[self._textarea] = "".join(self._text)
+            # Like a browser: one newline right after <textarea> is not part of the value.
+            text = "".join(self._text)
+            self.fields[self._textarea] = re.sub(r"^\r?\n", "", text, count=1)
             self._textarea = None
 
     def handle_data(self, data):

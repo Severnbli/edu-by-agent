@@ -38,6 +38,13 @@ trash_app = typer.Typer(help="Object trash: list, restore, delete for good.", no
 app.add_typer(object_app, name="object")
 app.add_typer(section_app, name="section")
 app.add_typer(trash_app, name="trash")
+design_app = typer.Typer(
+    help="Site design: templates, modules, style sets, scripts, resource strings (site-wide!).",
+    no_args_is_help=True,
+)
+cache_app = typer.Typer(help="Public site cache.", no_args_is_help=True)
+app.add_typer(design_app, name="design")
+app.add_typer(cache_app, name="cache")
 
 ProxyOpt = Annotated[
     str | None,
@@ -933,6 +940,174 @@ def trash_purge(
 
     with _site(proxy) as site:
         _run(site, plan_purge(site, type_id, object_ids), False, token, as_json)
+
+
+# ---------- design ----------
+
+KindArg = Annotated[
+    str, typer.Argument(help="template | control (module) | css | js | string (resource string).")
+]
+IdsOpt = Annotated[list[str] | None, typer.Option(help="Style set / script id (repeatable).")]
+
+
+@design_app.command("list")
+def design_list(
+    category: Annotated[
+        str,
+        typer.Argument(
+            help="Master | Head | Normal | 404 | NotUseTemplate | Actual | Old | NotUse | "
+            "CssPacked | JavaScript | ResourceString | TemplateGlobal"
+        ),
+    ],
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """Items of a design category (templates, modules, style sets, …)."""
+    from edu_by.api import design
+
+    with _site(proxy) as site:
+        rows = design.list_category(site, category)
+    if as_json:
+        _print_json(rows)
+        return
+    for r in rows:
+        typer.echo(f"  {r['id']:>6}  {r['title']}")
+    typer.echo(f"{len(rows)} item(s)")
+
+
+@design_app.command("show")
+def design_show(
+    kind: KindArg,
+    item_id: str,
+    full: Annotated[bool, typer.Option("--full", help="Print long values in full.")] = False,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """One design item: its fields (names for `design set`), template master and CSS / JS."""
+    from edu_by.api import design
+
+    with _site(proxy) as site:
+        data = design.read_item(site, kind, item_id).summary(full=full)
+    if as_json:
+        _print_json(data)
+        return
+    typer.echo(f"{data['kind']} {data['id']}  «{data['title']}»")
+    for k in ("master", "js", "css", "lists"):
+        if data.get(k) is not None:
+            typer.echo(f"  {k}: {data[k]}")
+    for k, v in data["fields"].items():
+        typer.echo(f"  [{k}] {v}")
+
+
+@design_app.command("set")
+def design_set(
+    kind: KindArg,
+    item_id: str,
+    values: SetOpt = None,
+    attach_css: IdsOpt = None,
+    detach_css: IdsOpt = None,
+    attach_js: IdsOpt = None,
+    detach_js: IdsOpt = None,
+    yes: YesOpt = False,
+    token: TokenOpt = None,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """Save fields of a design item (others keep their values); for a template also attach
+    (last) or detach style sets and scripts. Site-wide if the item is in use."""
+    from edu_by.api import design
+
+    with _site(proxy) as site:
+        change = design.plan_set(
+            site, kind, item_id, _kv(values), attach_css, detach_css, attach_js, detach_js
+        )
+        _run(site, change, yes, token, as_json)
+
+
+@design_app.command("copy")
+def design_copy(
+    kind: KindArg,
+    item_id: str,
+    name: Annotated[str, typer.Option("--name", help="Name of the copy.")],
+    yes: YesOpt = False,
+    token: TokenOpt = None,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """«Создать копию» and name it; the copy is used nowhere yet."""
+    from edu_by.api import design
+
+    with _site(proxy) as site:
+        _run(site, design.plan_copy(site, kind, item_id, name), yes, token, as_json)
+
+
+@design_app.command("add")
+def design_add(
+    kind: Annotated[str, typer.Argument(help="css | js")],
+    name: Annotated[str, typer.Option("--name", help="Name of the new item.")],
+    body: Annotated[
+        str, typer.Option("--body", help="Text; @file reads a file (e.g. @style.css).")
+    ] = "",
+    yes: YesOpt = False,
+    token: TokenOpt = None,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """A new style set or script (used nowhere until a template attaches it)."""
+    from edu_by.api import design
+
+    text = Path(body[1:]).read_text(encoding="utf-8") if body.startswith("@") else body
+    with _site(proxy) as site:
+        _run(site, design.plan_create(site, kind, name, text), yes, token, as_json)
+
+
+@design_app.command("delete")
+def design_delete(
+    kind: KindArg,
+    item_id: str,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Allow items not named «Редизайн…» / «Тест…»."),
+    ] = False,
+    token: TokenOpt = None,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """Delete a design item at once (no trash). Needs --token from the preview."""
+    from edu_by.api import design
+
+    with _site(proxy) as site:
+        _run(site, design.plan_delete(site, kind, item_id, force), False, token, as_json)
+
+
+@design_app.command("export")
+def design_export(
+    out: Annotated[Path, typer.Argument(help="ZIP file to write.")],
+    proxy: ProxyOpt = None,
+) -> None:
+    """«Экспорт в архив» of all templates with what they use – the design backup (read-only)."""
+    from edu_by.api import design
+
+    with _site(proxy) as site:
+        data = design.export_archive(site)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
+    out.chmod(0o600)
+    typer.echo(f"Saved {out} ({len(data)} bytes)")
+
+
+@cache_app.command("clear")
+def cache_clear(
+    yes: YesOpt = False,
+    token: TokenOpt = None,
+    as_json: JsonOpt = False,
+    proxy: ProxyOpt = None,
+) -> None:
+    """Clear the public site cache (pages are rebuilt on the next view)."""
+    from edu_by.api import design
+
+    with _site(proxy) as site:
+        _run(site, design.plan_clear_cache(site), yes, token, as_json)
 
 
 if __name__ == "__main__":
