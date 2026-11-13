@@ -63,7 +63,7 @@ Every write re-reads the item: `Applied and verified.` with the new values. A te
 
 - `has no field(s) …; fields: …` – use a name from the list (they differ per module type).
 - `the CSS / JS lists are not on the page – refusing` – the template page changed or the session expired; don't save it by other means (it would detach all styles).
-- `section lists … can't be set here yet` – module section lists (`ASD_ClassifierList`, …) and a template's sections (`ClassifierL`) are kept as they are; give a section its template with `edu section set … --template`.
+- `section lists …: give them as lists` – a module's section lists (`ASD_ClassifierList`, …) are set with `--list NAME=ID,ID` (e.g. `--list ASD_ClassifierList=1001` together with `--set ASD_ViewType=ClassifierList`; the site root `/` has no current section, so home-page modules must list 1001). A template's sections (`ClassifierL`) are not set here: give a section its template with `edu section set … --template`.
 - `its section list (ClassifierL) is not on the page – refusing` – never save that template another way: an empty list detaches every section using it (the whole site for the live Обычный template).
 - `verified: false` with `lists` before / after – a section list changed on save: `design show` the item and tell the user at once.
 - `refusing without force` – not a redesign / test item; ask the user before `--force`.

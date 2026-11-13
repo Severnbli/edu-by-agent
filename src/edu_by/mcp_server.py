@@ -332,19 +332,23 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
         "Edit an object",
         _write("publish"),
         "Set text fields of an object (`values`: short names from edu_object, e.g. name, "
-        "text, zag, txt, dt_text dd.mm.yyyy, url, tags) and/or `published`. Other fields "
-        "keep their values." + CONTRACT,
+        "text, zag, txt, dt_text dd.mm.yyyy, url, tags), `published` and/or `languages` "
+        '(labels as in the editor, e.g. ["Русский"]; list modules show only objects in the '
+        "page language, and copies come with none). Other fields keep their values." + CONTRACT,
     )
     async def edu_object_update(
         id: str,
         values: dict[str, str] | None = None,
         published: bool | None = None,
+        languages: list[str] | None = None,
         confirm_token: str | None = None,
     ) -> dict:
         from edu_by.api import objects_write as ow
 
         return await run(
-            lambda site: _plan_or_apply(ow.plan_update(site, id, values, published), confirm_token)
+            lambda site: _plan_or_apply(
+                ow.plan_update(site, id, values, published, languages), confirm_token
+            )
         )
 
     @tool(
@@ -593,8 +597,9 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
         _write("publish"),
         "SITE-WIDE: save fields of a template / module / style set / script / resource string "
         "(`values`: field -> new value, others keep theirs); for a template also attach (as "
-        "last) or detach style sets and scripts by id. Every page using the item changes at "
-        "once – prefer working on a copy." + CONTRACT,
+        "last) or detach style sets and scripts by id; for a module `lists` replaces section "
+        'lists (e.g. {"ASD_ClassifierList": ["1001"]}). Every page using the item '
+        "changes at once – prefer working on a copy." + CONTRACT,
     )
     async def edu_design_update(
         kind: str,
@@ -604,6 +609,7 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
         detach_css: list[str] | None = None,
         attach_js: list[str] | None = None,
         detach_js: list[str] | None = None,
+        lists: dict[str, list[str]] | None = None,
         confirm_token: str | None = None,
     ) -> dict:
         from edu_by.api import design
@@ -611,7 +617,7 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
         return await run(
             lambda site: _plan_or_apply(
                 design.plan_set(
-                    site, kind, id, values, attach_css, detach_css, attach_js, detach_js
+                    site, kind, id, values, attach_css, detach_css, attach_js, detach_js, lists
                 ),
                 confirm_token,
             )

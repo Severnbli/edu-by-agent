@@ -61,7 +61,7 @@ Common fields (`ctl00$Main$…`):
 |---|---|
 | `CheckBoxStatusObject` (checkbox) | «Разрешить публикацию» (allow publication): checked = published (verified) |
 | `Classifier` | parent section; label warns «при смене классификатора объект…» (changing it moves the object) |
-| `ListLang$<n>` (checkbox) | languages the object is shown in (`ListLang$0` = Русский) |
+| `ListLang$<n>` (checkbox) | languages the object is shown in (`ListLang$0` = Русский); posts `on` when ticked, left out when not. An object with none ticked is not shown by list modules (verified 2026-11-13: copies of HTML blocks; fixed by ticking `$0`) – `edu object set ID --lang Русский` |
 | `Tags` | tags |
 | `IsClearCache`, `HiddenTitleObject` | hidden helpers (`IsClearCache = 0` in all saves) |
 

@@ -36,7 +36,8 @@ mkdir -p .session/work                                   # working files; .sessi
 ```bash
 ./edu object publish 2283 --yes           # / unpublish
 ./edu object add 1001/1041 --type 524 --set name="…" --set text=@.session/work/new.html --yes
-./edu object copy 2283 --yes               # unpublished copy in the same section
+./edu object copy 2283 --yes               # unpublished copy in the same section – without tags and languages:
+./edu object set 6573 --set Tags=… --lang Русский --yes   # …so set them, or list modules skip the copy
 ./edu object move 2283 2293 --to 1001/1061 --yes
 ./edu object sort 1001/1041 2293 2283 117633 --yes   # all ids of the section, new order
 ./edu object trash 2283                    # preview → then --token …

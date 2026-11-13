@@ -43,7 +43,7 @@ Write tools – one per planned write, all with the same contract:
 
 | Tool | Plan function | Level |
 |---|---|---|
-| `edu_object_update(id, values?, published?)` | `objects_write.plan_update` | edit / publish |
+| `edu_object_update(id, values?, published?, languages?)` | `objects_write.plan_update` | edit / publish |
 | `edu_object_create(section, type_id, count=1, values?)` | `plan_create` | edit |
 | `edu_object_copy(id)` | `plan_copy` | edit |
 | `edu_object_move(ids, target_section)` | `plan_move` | edit / publish |
@@ -56,7 +56,7 @@ Write tools – one per planned write, all with the same contract:
 | `edu_section_delete(section)` | `sections.plan_delete` | delete |
 | `edu_trash_restore(type_id, ids, section)` | `trash.plan_restore` | edit |
 | `edu_trash_purge(type_id, ids)` | `trash.plan_purge` | delete, irreversible |
-| `edu_design_update(kind, id, values?, attach_css?, detach_css?, attach_js?, detach_js?)` | `design.plan_set` | publish – site-wide for an item in use |
+| `edu_design_update(kind, id, values?, attach_css?, detach_css?, attach_js?, detach_js?, lists?)` | `design.plan_set` | publish – site-wide for an item in use |
 | `edu_design_copy(kind, id, name)` | `design.plan_copy` | edit – a new item, used nowhere yet |
 | `edu_design_create(kind, name, body)` | `design.plan_create` | edit – css / js only |
 | `edu_design_delete(kind, id, force=false)` | `design.plan_delete` | delete, immediate (no trash); «Редизайн…» / «Тест…» items only unless `force` |
