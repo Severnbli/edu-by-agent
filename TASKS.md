@@ -50,7 +50,7 @@ Planned writes in `api/` (`changes.Change`: plan reads only, returns before/afte
 The plan and status of one school's redesign are site data and live in the git-ignored `.session/notes/` (see CLAUDE.md «Site data»). Constructor-side work:
 - [x] design tools: `edu design list|show|set|copy|add|delete|export`, `edu cache clear`, MCP `edu_design_*`, skill `edu-design` (2026-11-11)
 - [x] a template save keeps its sections (`ClassifierL`), module «Язык» boxes, module checkboxes (2026-11-11)
-- [ ] module section lists (`ASD_ClassifierList`, …) are kept, not settable
+- [x] module section lists (`ASD_ClassifierList`, …): `edu design set --list NAME=ID,ID` / MCP `lists` (2026-11-13)
 - [ ] consider applying a redesign through «Импорт из архива» (new prefixed items) – needs a test on a copy
 - [ ] find how the home page picks one of several «Главный» templates
 
