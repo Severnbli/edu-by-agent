@@ -91,6 +91,10 @@ Modules don't have fixed HTML: each one keeps its markup in its settings. `Contr
 
 A module copy keeps its source's `Text_Before` / `Text_After`: when the markup changes, empty them too – the section menu 2791 ends with `</div></div>` (closing its own wrapper), which in copy 3271 closed the new layout early and put the footer outside `.r26`.
 
+**Tag filter of `WJG.Core_ListObject`** (dialog labels «Теги – Статус: Отключено / Включено (И) / Включено (ИЛИ)», «Список:»): radio `ASD_TagStatus` = `0` / `1` / `2`, text `ASD_TagText` (e.g. 2641 «Популярные разделы» has `1` + `популярный`). An object matches by its `Tags` field. This lets several copies of one list module show different objects of the same section: live test 2026-11-13 – three copies of the HTML-block module 2821 (`ASD_ViewType = NowClassifier`, «the current section») with one tag each rendered their own tagged 524 blocks in three places of one template body; `design set` sets both fields as plain values. Items come out in the section's sort order, and new objects are created at the top of it, so set the order with `object sort` after creating them.
+
+`sm.aspx?guid=<object>` of an object without its own binary (e.g. a news item whose photos are only inside `txt`) answers `302` to `/SystemText/NotBinary.png` – a list module that uses it as a thumbnail shows that placeholder (live 2026-11-13).
+
 So a redesign can change the HTML of menus, news lists, breadcrumbs and the language switcher, not only their CSS. Template bodies (`Content<N>` in the export, `Body_Content$TextBoxRes` in the dialog) are free HTML with `LoadModule` / `<control>` references.
 
 ## Fonts and files for a design
