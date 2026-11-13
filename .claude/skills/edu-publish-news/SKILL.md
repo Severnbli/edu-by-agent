@@ -7,6 +7,8 @@ description: Publish a news item («Новость») with photos on an edu.by s
 
 A news item is an object of type **534 «Новость»**. Its photos are separate **image objects (304 «Графический объект»)** in the same section, left unpublished and shown inside the news text with `<img src="sm_full.aspx?guid=<image id>">`. That is how this site's existing news are built (knowledge/endpoints/dialogs.md, «News»).
 
+The news object also takes **its own picture – the cover**. News lists (home page, archive) show it through `sm.aspx?guid=<news id>`; a news item without one shows the platform's empty placeholder there. Always give a news item with photos a cover: its first photo.
+
 Everything goes through `./edu` from the repo root. Write commands only preview without `--yes`.
 
 ## Inputs – ask the user for what is missing
@@ -44,8 +46,13 @@ Everything goes through `./edu` from the repo root. Write commands only preview 
      --set zag="Заголовок" --set name="Аннотация" --set txt=@.session/work/news.html
    ```
    On the OK, rerun with `--yes`. The result shows the new id. Don't assume ids grow: the constructor reuses old ids.
-6. Check the draft: `./edu object show <news id>`. Give the user the `public_url` and the constructor to look at. The public page works only after publishing.
-7. Publish only when the user says so:
+6. Cover: upload the first photo into the news object itself (same file as the first image object):
+   ```bash
+   ./edu object upload <news id> .session/work/photo1.jpg --shrink --yes
+   ```
+   For a news item without photos, skip this; the lists then show it without a picture.
+7. Check the draft: `./edu object show <news id>`. Give the user the `public_url` and the constructor to look at. The public page works only after publishing.
+8. Publish only when the user says so:
    ```bash
    ./edu object publish <news id>          # preview: published False -> True
    ./edu object publish <news id> --yes
@@ -55,6 +62,7 @@ Everything goes through `./edu` from the repo root. Write commands only preview 
 ## Verify
 
 - `Applied and verified.` means the fields were re-read and match. Exit code 4 means applied, but the check found a difference: show the `mismatch` to the user.
+- `curl`/browser `sm.aspx?guid=<news id>` on the public host returns the cover (a 1×1 `NotBinary.png` means no cover).
 - After publishing, the news appears at the top of `./edu objects 1001/1431/1031 --pages 1` without the `-` mark, and its `public_url` shows the headline and the photos.
 
 ## Editing an existing news item
@@ -67,6 +75,10 @@ Everything goes through `./edu` from the repo root. Write commands only preview 
 ```
 
 A published news item changes on the site at once (the preview says `[publish]`), so confirm with the user first. Each save sends all fields, so the publication state is kept unless you change it.
+
+## Cover for an existing news item
+
+The first photo of an older news item is an image object on the site: download `sm_full.aspx?guid=<image id>` from the public host (through the proxy) into `.session/work/`, then `./edu object upload <news id> <file> --shrink` (preview, `[publish]` level for a published news item: lists show the picture at once – confirm with the user first).
 
 ## Common errors
 

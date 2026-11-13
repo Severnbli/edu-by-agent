@@ -1,6 +1,6 @@
 # Publish a news item (MCP tools)
 
-A news item is an object of type **534 «Новость»** with fields `dt_text` (date `dd.mm.yyyy`, required), `zag` (headline), `name` (annotation shown in the news list), `txt` (body HTML). Its photos are separate **image objects (304)** in the same section, left **unpublished** and shown inside `txt` with `<img src="sm_full.aspx?guid=<image id>">`, as the site's own news are built.
+A news item is an object of type **534 «Новость»** with fields `dt_text` (date `dd.mm.yyyy`, required), `zag` (headline), `name` (annotation shown in the news list), `txt` (body HTML). Its photos are separate **image objects (304)** in the same section, left **unpublished** and shown inside `txt` with `<img src="sm_full.aspx?guid=<image id>">`, as the site's own news are built. The news object also takes its own picture – the **cover** that news lists show via `sm.aspx?guid=<news id>` (without it they show an empty placeholder): give every news item with photos its first photo as the cover.
 
 Every write tool first returns a preview. Show it to the user, and call again with `confirm_token` only after their OK.
 
@@ -20,8 +20,9 @@ Date, headline, annotation (propose one from the text if none is given, and let 
    `<p style="text-align: center;"><img src="sm_full.aspx?guid=<image id>" width="800" /></p>`.
    Use plain HTML: no scripts, no external images. Documents go in as links (`<a href="https://…">`).
 5. `edu_object_create(section, type_id="534", values={"dt_text": "10.11.2026", "zag": "…", "name": "…", "txt": "…"})` → show the preview → confirm. Take the id from `result.ids`, since ids are reused.
-6. `edu_object(<news id>)`: check the fields, and give the user the `public_url`. The page shows only after publishing.
-7. Only when the user says so: `edu_object_update(id, published=true)` → preview (`published: false → true`, level `publish`) → confirm.
+6. Cover: `edu_object_upload_image(<news id>, <path of the first photo>)` → preview → confirm. Skip it for a news item without photos.
+7. `edu_object(<news id>)`: check the fields, and give the user the `public_url`. The page shows only after publishing.
+8. Only when the user says so: `edu_object_update(id, published=true)` → preview (`published: false → true`, level `publish`) → confirm.
 
 ## Verify and errors
 
