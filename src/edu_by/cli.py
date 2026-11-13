@@ -631,12 +631,18 @@ def object_set(
     publish: Annotated[
         bool | None, typer.Option("--publish/--unpublish", help="Change «Разрешить публикацию».")
     ] = None,
+    lang: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--lang", help="Languages (repeatable, labels as in the editor, e.g. Русский)."
+        ),
+    ] = None,
     yes: YesOpt = False,
     token: TokenOpt = None,
     as_json: JsonOpt = False,
     proxy: ProxyOpt = None,
 ) -> None:
-    """Change an object's fields and/or publication (other fields keep their values)."""
+    """Change an object's fields, publication and/or languages (others keep their values)."""
     from edu_by.api import objects_write as ow
 
     vals = _kv(values)
@@ -648,7 +654,8 @@ def object_set(
             page = dialogs.open_dialog(site.client, site.base_url, EDITOR_PATH, object_id)
             key = "txt" if "ctl00$Main$txt" in page.fields else "text"
             vals[key] = text_file.read_text(encoding="utf-8")
-        _run(site, ow.plan_update(site, object_id, vals, publish), yes, token, as_json)
+        change = ow.plan_update(site, object_id, vals, publish, lang or None)
+        _run(site, change, yes, token, as_json)
 
 
 @object_app.command("publish")
@@ -1008,6 +1015,14 @@ def design_set(
     detach_css: IdsOpt = None,
     attach_js: IdsOpt = None,
     detach_js: IdsOpt = None,
+    section_list: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--list",
+            help="Module section list NAME=ID,ID (repeatable; NAME= empties it), "
+            "e.g. ASD_ClassifierList=1001.",
+        ),
+    ] = None,
     yes: YesOpt = False,
     token: TokenOpt = None,
     as_json: JsonOpt = False,
@@ -1017,9 +1032,23 @@ def design_set(
     (last) or detach style sets and scripts. Site-wide if the item is in use."""
     from edu_by.api import design
 
+    lists: dict[str, list[str]] = {}
+    for item in section_list or []:
+        name, sep, ids = item.partition("=")
+        if not sep:
+            raise typer.BadParameter(f"--list wants NAME=ID,ID, got {item!r}")
+        lists[name.strip()] = [i for i in ids.replace(";", ",").split(",") if i.strip()]
     with _site(proxy) as site:
         change = design.plan_set(
-            site, kind, item_id, _kv(values), attach_css, detach_css, attach_js, detach_js
+            site,
+            kind,
+            item_id,
+            _kv(values),
+            attach_css,
+            detach_css,
+            attach_js,
+            detach_js,
+            lists or None,
         )
         _run(site, change, yes, token, as_json)
 

@@ -14,7 +14,13 @@ from pathlib import Path
 
 from edu_by.api import dialogs
 from edu_by.api.changes import Change, WriteError
-from edu_by.api.objects import EDITOR_PATH, ObjectData, parse_object_editor, read_object
+from edu_by.api.objects import (
+    EDITOR_PATH,
+    ObjectData,
+    _LangLabels,
+    parse_object_editor,
+    read_object,
+)
 from edu_by.site import Site
 from edu_by.webforms import WebFormPage
 
@@ -23,6 +29,7 @@ SORT_PATH = "/G_Data/ObjectsSort.aspx"
 FRAME_PATH = "/G_All/BinaryFrame.aspx"
 MAIN = "ctl00$Main$"
 PUBLISHED = MAIN + "CheckBoxStatusObject"
+LANG_PREFIX = MAIN + "ListLang$"
 # Fields an edit may not touch: the section (use move), list label and helpers, languages.
 FIXED = {"Classifier", "HiddenTitleObject", "IsClearCache", "CheckBoxStatusObject"}
 IMAGE_LIMIT = 300_000  # bytes; larger files are dropped silently by the server
@@ -57,6 +64,16 @@ def _summary(obj: ObjectData) -> dict:
     return d
 
 
+def _lang_boxes(page_html: str) -> dict[str, str]:
+    """Language label -> checkbox name (`ctl00$Main$ListLang$<n>`) offered by the editor."""
+    langs = _LangLabels()
+    langs.feed(page_html)
+    return {
+        label.strip(): LANG_PREFIX + box_id.rsplit("_", 1)[1]
+        for box_id, label in langs.labels.items()
+    }
+
+
 def editable_fields(page_fields: dict[str, str]) -> list[str]:
     """Short names of the text fields an object editor offers (e.g. name, text, zag, url)."""
     out = []
@@ -88,13 +105,17 @@ def plan_update(
     object_id: str,
     values: dict[str, str] | None = None,
     published: bool | None = None,
+    languages: list[str] | None = None,
 ) -> Change:
-    """Change text fields of an object and/or its «Разрешить публикацию» flag.
+    """Change text fields of an object, its «Разрешить публикацию» flag and/or its languages.
 
     `values` keys are the short field names of the object's editor (see `editable_fields`):
     `name`, `text`, `dop`, `tags`→`Tags`; news: `zag`, `txt`, `dt_text`; link cards: `format`,
     `size`, `url`. Unknown keys are refused – every save posts all fields, so the others keep
     their current values, including the publication flag unless `published` is given.
+    `languages` (labels as in the editor, e.g. «Русский») replaces the ticked `ListLang$<n>`
+    boxes; list modules show only objects in the page's language, and «Создать копию»
+    leaves a copy with none ticked (live 2026-11-13).
     """
     values = dict(values or {})
     if "tags" in values:
@@ -110,6 +131,16 @@ def plan_update(
     fields = {k: (_norm(page.fields[MAIN + k]), _norm(v)) for k, v in values.items()}
     if published is not None:
         fields["published"] = (obj.published, published)
+    lang_boxes: dict[str, str] = {}
+    if languages is not None:
+        boxes = _lang_boxes(page.html)
+        missing = [x for x in languages if x not in boxes]
+        if missing:
+            raise WriteError(
+                f"object {object_id} has no language(s) {missing}; offered: {', '.join(boxes)}"
+            )
+        lang_boxes = {boxes[x]: x for x in languages}
+        fields["languages"] = (obj.languages, list(languages))
     level = "publish" if obj.published or published else "edit"
     notes = []
     if obj.published and published is not False:
@@ -131,6 +162,10 @@ def plan_update(
                 page.fields[PUBLISHED] = "on"
             elif published is False:
                 page.fields.pop(PUBLISHED, None)
+            if languages is not None:
+                for k in [k for k in page.fields if k.startswith(LANG_PREFIX)]:
+                    del page.fields[k]
+                page.fields.update({name: "on" for name in lang_boxes})
             res = dialogs.submit(page, dialogs.SAVE)
             if res.status != "Save":
                 raise WriteError(
@@ -146,6 +181,8 @@ def plan_update(
         }
         if published is not None and after.published != published:
             mismatch["published"] = after.published
+        if languages is not None and sorted(after.languages) != sorted(languages):
+            mismatch["languages"] = after.languages
         return {"object": _summary(after), "verified": not mismatch, "mismatch": mismatch}
 
     return Change(
@@ -154,7 +191,7 @@ def plan_update(
         level,
         fields,
         notes,
-        {"id": object_id, "values": values, "published": published},
+        {"id": object_id, "values": values, "published": published, "languages": languages},
         do,
     )
 

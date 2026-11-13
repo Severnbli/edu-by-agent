@@ -18,7 +18,7 @@ Locate the target first (prompt `edu_find_content`) and use **id paths** for sec
 - `edu_object_update(id, values={"text": "<html>"})`: keep the existing structure and inline styles, change only what was asked. A text that is one bare `<p>…</p>` is stored without the tags.
 - `edu_object_update(id, published=true|false)`: show or hide.
 - `edu_object_create(section, type_id, count, values)`: new objects are **unpublished**. Take the ids from `result.ids` (ids are reused).
-- `edu_object_copy(id)`, `edu_object_move(ids, target_section)`, `edu_object_sort(section, order)` (all ids of the section in the new order).
+- `edu_object_copy(id)` (the copy has no tags and no languages: then `edu_object_update(id, values={"tags": …}, languages=["Русский"])`, or list modules skip it), `edu_object_move(ids, target_section)`, `edu_object_sort(section, order)` (all ids of the section in the new order).
 - `edu_object_trash(ids)`: delete level, restorable from the trash.
 
 ## Sections (menu pages)

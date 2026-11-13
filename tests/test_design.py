@@ -274,6 +274,18 @@ def test_control_save_rebuilds_section_lists(rp):
         design.plan_set(site, "control", "3001", {"ASD_ClassifierList": "1;"})
 
 
+def test_control_section_list_is_replaced(rp):
+    fake, site = rp
+    with pytest.raises(WriteError, match="no section list"):
+        design.plan_set(site, "control", "3001", lists={"ASD_Other": ["1"]})
+    with pytest.raises(WriteError, match="must be numbers"):
+        design.plan_set(site, "control", "3001", lists={"ASD_ClassifierList": ["x"]})
+    ch = design.plan_set(site, "control", "3001", lists={"ASD_ClassifierList": ["1001"]})
+    assert ch.fields == {"ASD_ClassifierList": (["5001", "5002"], ["1001"])}
+    ch.apply(ch.token)
+    assert fake.control_posts[-1]["ctl00$Main$ASD_ClassifierList"] == "1001;"
+
+
 def test_copy_names_the_copy_and_delete_is_guarded(rp):
     fake, site = rp
     ch = design.plan_copy(site, "template", "1001", "Редизайн 2026. Мастер")

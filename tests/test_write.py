@@ -179,3 +179,16 @@ def test_template_options() -> None:
     )
     assert template_options(html) == {"0": "-- Шаблон по умолчанию --", "2001": "Тестовый шаблон"}
     assert template_options("<form></form>") == {}
+
+
+def test_plan_update_languages_replace_the_ticked_boxes():
+    fake = FakeEditor()
+    site = fake_site(fake.handler)
+    with pytest.raises(WriteError, match="no language"):
+        ow.plan_update(site, "1063", languages=["Deutsch"])
+    change = ow.plan_update(site, "1063", languages=["Беларуская"])
+    assert change.fields == {"languages": (["Русский"], ["Беларуская"])}
+    change.apply(change.token)
+    post = fake.posts[-1]
+    assert post["ctl00$Main$ListLang$1"] == "on" and "ctl00$Main$ListLang$0" not in post
+    assert post["ctl00$Main$name"] == "основной"  # other fields carried over

@@ -361,13 +361,13 @@ def _label(item: DesignItem) -> str:
     return f"{item.kind} {item.id} «{item.title[:70]}»"
 
 
-def _post_fields(item: DesignItem) -> dict[str, str]:
+def _post_fields(item: DesignItem, lists: dict[str, list[str]] | None = None) -> dict[str, str]:
     """The fields a save must carry besides the GET ones (what the page's JS fills)."""
     extra: dict[str, str] = {}
     if item.kind == "template":
         extra[MAIN + "HiddenFieldForSave"] = template_hidden(item.js, item.css)
     if item.kind in ("control", "template"):
-        for name, ids in item.lists.items():
+        for name, ids in (lists if lists is not None else item.lists).items():
             extra[MAIN + name] = "".join(f"{i};" for i in ids)
     return extra
 
@@ -387,9 +387,12 @@ def plan_set(
     detach_css: list[str] | None = None,
     attach_js: list[str] | None = None,
     detach_js: list[str] | None = None,
+    lists: dict[str, list[str]] | None = None,
 ) -> Change:
     """Save fields of a design item (others keep their values) and, for a template, attach
     or detach style sets / scripts (attached ones go last, i.e. load after the others).
+    `lists` replaces a module's section lists (`ASD_ClassifierList` …, see `show`) with the
+    given section ids; the others are posted as they are.
 
     Field names (`values` keys): template `title`, `master`, `head`, `body`, `body1`…;
     module `title`, `Text_Before`, `Text_After`, `WhereUse`, `ASD_<setting>` (see `show`;
@@ -405,13 +408,26 @@ def plan_set(
         )
     bad = [k for k in values if k in item.lists]
     if bad:
-        raise WriteError(f"section lists {bad} can't be set here yet (ids `1011;` …)")
+        raise WriteError(f"section lists {bad}: give them as `lists`, not as field values")
+    new_lists = {k: list(v) for k, v in item.lists.items()}
+    for name, ids in (lists or {}).items():
+        if name not in item.lists:
+            raise WriteError(
+                f"{_label(item)} has no section list {name!r}; lists: {', '.join(item.lists)}"
+            )
+        ids = [str(i).strip() for i in ids if str(i).strip()]
+        if not all(i.isdigit() for i in ids):
+            raise WriteError(f"section list {name}: ids must be numbers, got {ids}")
+        new_lists[name] = ids
     for k in values:
         if k in item.checkboxes:
             values[k] = _checkbox_value(item, k, values[k])
     if kind == "template" and "master" in values and values["master"] not in item.masters:
         raise WriteError(f"template {item_id}: master {values['master']} is not offered")
     fields = {k: (_norm(item.fields[k]), _norm(v)) for k, v in values.items()}
+    for name, ids in new_lists.items():
+        if ids != item.lists[name]:
+            fields[name] = (item.lists[name], ids)
 
     js, css = list(item.js), list(item.css)
     if kind == "template":
@@ -435,7 +451,9 @@ def plan_set(
     elif attach_css or detach_css or attach_js or detach_js:
         raise WriteError("only templates attach style sets and scripts")
     if not fields:
-        raise WriteError("nothing to change: give field values or CSS / JS to attach / detach")
+        raise WriteError(
+            "nothing to change: give field values, section lists or CSS / JS to attach / detach"
+        )
 
     notes = [
         "design items are site-wide: if this one is in use, every page using it changes at once"
@@ -451,7 +469,7 @@ def plan_set(
     def do() -> dict:
         with site.lock:
             page = item.page
-            extra = _post_fields(item)
+            extra = _post_fields(item, new_lists)
             if kind == "template":
                 extra[MAIN + "HiddenFieldForSave"] = template_hidden(js, css)
             for k, v in values.items():
@@ -474,9 +492,9 @@ def plan_set(
             if kind == "template":
                 got["css"], got["js"] = after.css, after.js
                 ok = ok and after.css == css and after.js == js
-            if after.lists != item.lists:  # section lists must survive every save
+            if after.lists != new_lists:  # section lists must survive every save
                 ok = False
-                got["lists"] = {"before": item.lists, "after": after.lists}
+                got["lists"] = {"expected": new_lists, "after": after.lists}
             return {"verified": ok, "now": {k: _short(v) for k, v in got.items()}}
 
     return Change(
@@ -485,7 +503,7 @@ def plan_set(
         level="publish",
         fields=fields,
         notes=notes,
-        params={"kind": kind, "id": str(item_id), "values": values},
+        params={"kind": kind, "id": str(item_id), "values": values, "lists": new_lists},
         _do=do,
     )
 
