@@ -81,6 +81,7 @@ Modules don't have fixed HTML: each one keeps its markup in its settings. `Contr
 | `WJG.Core_Lang` (2551 on this site, not used – `WhereUse=0`) | `Lang_<n>` (code), `LangNo_<n>` / `LangYes_<n>` (HTML of a not-chosen / chosen language) | – |
 | `WJG.Core_Way` (1071) | `BlockStart`, `Separator`, `ShowActiveClassifier` | – |
 | `WJG.Core_Tab` (tabs, e.g. 2711) | `Theme`, `ThemeUser`, `Str<n>` (tab title), `GuidControl<n>` (module in the tab) | – |
+| RSS feed modules (e.g. «Новости Республики / региона / района» tabs) | `ASD_GuidRss` – a `<select>` of RSS sources kept by the platform (ministry, regional and district education offices; `0` = none), **no field for an external feed URL**; `Format` – XSLT over the feed's `item`s (`title`, `link`, `pubDate`) | `WJG:FormatDate(pubDate,'ShortDate')`, `[[lastUpdate]]` |
 | `WJG.Core_Head` (1611, «Данные в блок head») | `ASD_Str` (HTML put into `<head>`), `ASD_KeyWords` | – |
 
 `<{<id>}>` anywhere is a resource string (Localization item) – e.g. the cookie notice text is string 1498, its show / hide logic is in JS 1273.
@@ -95,7 +96,7 @@ A module copy keeps its source's `Text_Before` / `Text_After`: when the markup c
 
 `sm.aspx?guid=<object>` of an object without its own binary (e.g. a news item whose photos are only inside `txt`) answers `302` to `/SystemText/NotBinary.png` – a list module that uses it as a thumbnail shows that placeholder (live 2026-11-13). The placeholder is a 1×1 PNG, so a page script can spot it (`img.naturalWidth <= 1`). `sm.aspx` serves the object's own picture at full size (no thumbnail). Uploading a picture into the news object itself (`edu object upload <news id> FILE --shrink`) gives it a cover in every list at once (live 2026-11-13, 10 news).
 
-After `ClearCache` a public `css.aspx?guid=<set>` may still answer with the old body for a short while (seen 2026-11-13: one page load right after the clear got the old set, the next ones the new) – reload before judging a CSS change.
+After `ClearCache` a public `css.aspx?guid=<set>` may still answer with the old body for a short while (seen 2026-11-13: one page load right after the clear got the old set, the next ones the new) – reload before judging a CSS change. Seen longer on 2026-11-16: for many minutes after one or two clears, repeated GETs of the same `css.aspx` URL alternated between the previous and the new body (no header tells them apart), as if the server keeps more than one cached copy; a `&x=<random>` query always got the new body. Sample several GETs before calling a CSS change live.
 
 So a redesign can change the HTML of menus, news lists, breadcrumbs and the language switcher, not only their CSS. Template bodies (`Content<N>` in the export, `Body_Content$TextBoxRes` in the dialog) are free HTML with `LoadModule` / `<control>` references.
 
