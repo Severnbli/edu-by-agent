@@ -1,6 +1,6 @@
 # MCP server
 
-`edu mcp` (`src/edu_by/mcp_server.py`, stdio): the constructor's reads and planned writes as MCP tools, the skills' scenarios as prompts, `knowledge/` as resources. Everything it calls lives in `edu_by.site` and `edu_by.api`; the server adds **no request logic** (CLAUDE.md). Live-tested 2026-11-10 (section add, object create and update, section delete, purge on a test section, since deleted).
+`edu mcp` (`src/edu_by/mcp_server.py`, stdio): the constructor's reads and planned writes as MCP tools, the skills' scenarios as prompts, `knowledge/` as resources. Everything it calls lives in `edu_by.site` and `edu_by.api`; the server adds **no request logic** (AGENTS.md). Live-tested 2026-11-10 (section add, object create and update, section delete, purge on a test section, since deleted).
 
 ## Shape
 
@@ -62,7 +62,7 @@ Write tools – one per planned write, all with the same contract:
 | `edu_design_delete(kind, id, force=false)` | `design.plan_delete` | delete, immediate (no trash); «Редизайн…» / «Тест…» items only unless `force` |
 | `edu_cache_clear()` | `design.plan_clear_cache` | publish, harmless |
 
-**Contract** (the confirmation step of CLAUDE.md, same as the CLI's `--token`):
+**Contract** (the confirmation step of AGENTS.md, same as the CLI's `--token`):
 
 1. Called **without** `confirm_token`: the tool plans and returns `Change.preview()` – action, target, level, before/after per field, notes, `token` – and changes nothing. The description tells the agent to show this preview to the user and ask.
 2. Called **with** `confirm_token`: the tool plans again and calls `change.apply(confirm_token)`. A changed site or a different request gives a new token → `TokenMismatch` → error «preview again». Returns `{"plan": preview, "result": result}`; `result.verified` is the re-read check.
