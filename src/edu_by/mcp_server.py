@@ -2,7 +2,7 @@
 
 Design: docs/mcp.md. The server adds no request logic – every tool calls `edu_by.api` with
 one shared `Site`. Writes follow the preview / `confirm_token` contract of `Change`.
-Prompts are the skills' MCP scenarios (`.claude/skills/<name>/mcp.md`), resources are the
+Prompts are the skills' MCP scenarios (`.agents/skills/<name>/mcp.md`), resources are the
 `knowledge/` files.
 
 stdout carries the protocol: nothing here may print. Progress goes to stderr.
@@ -30,7 +30,7 @@ from edu_by import session as sess
 from edu_by.config import Settings, get_settings
 
 REPO = Path(__file__).resolve().parents[2]
-SKILLS = REPO / ".claude" / "skills"
+SKILLS = REPO / ".agents" / "skills"
 KNOWLEDGE = REPO / "knowledge"
 MAX_TREE_DEPTH = 3
 DEFAULT_LIST_PAGES = 3

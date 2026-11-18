@@ -358,7 +358,7 @@ def browse(
 
 @app.command("mcp")
 def mcp_command() -> None:
-    """Run the MCP server on stdio (for Claude Code: `.mcp.json`). Logs go to stderr."""
+    """Run the MCP server on stdio. Logs go to stderr."""
     from edu_by.mcp_server import serve
 
     serve()
