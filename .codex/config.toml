@@ -1,0 +1,3 @@
+[mcp_servers.edu-by]
+command = "./edu"
+args = ["mcp"]

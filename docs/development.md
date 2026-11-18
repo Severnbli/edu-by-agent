@@ -23,13 +23,15 @@ src/edu_by/
                           #   reads: explorer (tree, lists, types), objects, treecache (section paths)
                           #   planned writes: changes (Change, token), dialogs, objects_write, sections, trash, design
 docs/mcp.md               # MCP server: tools, confirm_token contract, prompts, resources
+.codex/config.toml        # registers `./edu mcp` for Codex in trusted workspaces
 .mcp.json                 # registers `./edu mcp` for Claude Code
 knowledge/
   README.md               # index of what is known and how confident
   auth.md                 # login, captcha, cookies, expiry
   endpoints/              # one file per area, documented from real traffic
   captures/               # sanitized HAR excerpts used as evidence (no secrets)
-.claude/skills/<name>/SKILL.md   # CLI scenario; mcp.md beside it = the same scenario in MCP tools (a prompt)
+.agents/skills/<name>/SKILL.md   # CLI scenario; mcp.md beside it = the same scenario in MCP tools (a prompt)
+.claude/skills/<name>     # relative symlink to the shared skill for Claude Code
 tests/
 ```
 

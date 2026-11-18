@@ -64,6 +64,8 @@ The plan and status of one school's redesign are site data and live in the git-i
 
 ## Done
 
+- [x] Codex primary: shared skills in `.agents/skills/`, project MCP registration, and compatibility links for Claude Code
+
 - [x] Repo setup, Docker runtime, `./edu` wrapper, proxy modes (direct over `wlo1`, Shadowsocks), proxy only for edu.by
 - [x] Session: captcha login with `.env` prefill, import, check (`IsSession`), keepalive
 - [x] `browse` desktop Chromium (saved session or prefilled login, `--login`), live HAR recording and sanitizer, `har summary`

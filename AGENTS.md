@@ -5,8 +5,10 @@ Tooling and knowledge that let agents operate the **edu.by site constructor** (t
 The repo has three layers, built in this order:
 
 1. **Knowledge** (`knowledge/`) – verified facts about the constructor: endpoints, request/response shapes, auth flow, quirks.
-2. **Skills** (`.claude/skills/`) – task-oriented instructions for agents ("publish a news item", "add a page to the menu") that call the CLI.
+2. **Skills** (`.agents/skills/`) – task-oriented instructions for agents ("publish a news item", "add a page to the menu") that call the CLI.
 3. **CLI** (`src/edu_by/`, command `edu`) – Python utilities: session handling, proxy, and a thin request client. The **MCP server** (`edu mcp`) wraps the same `api/`; it must not duplicate logic.
+
+Codex discovers skills in `.agents/skills/` and registers MCP via `.codex/config.toml` in trusted workspaces. Claude Code uses `CLAUDE.md`, skill directory symlinks, and `.mcp.json`. See the [MCP guide](docs/mcp.md) for setup.
 
 ## Development
 

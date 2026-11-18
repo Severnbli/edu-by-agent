@@ -5,11 +5,12 @@
 ## Shape
 
 - Module `src/edu_by/mcp_server.py`, CLI command `edu mcp` (stdio). Built with `FastMCP("edu-by")`.
+- Registered for Codex in `.codex/config.toml`. Open Codex from the repository root and trust the project to load its MCP configuration. Use `codex mcp list` from the root to check the registration.
 - Registered for Claude Code in a project `.mcp.json`:
   ```json
   {"mcpServers": {"edu-by": {"command": "./edu", "args": ["mcp"]}}}
   ```
-  Uses the same `.env`, `.session/` and proxy as the CLI. `./edu proxy up` must be running.
+- Both registrations use the same `.env`, `.session/` and proxy as the CLI. Start the proxy with `./edu proxy up` if the project's network setup requires a proxy container.
 - **stdout is the protocol.** Nothing may print to stdout: progress (`Site.on_request`) and logs go to stderr. Never log cookies, `GuidSession`, `EDU_PASSWORD` or `ss://` links; mask as `config.mask` does.
 - One `Site` per server process, created on the first tool call (not at start-up, so the server starts even with an expired session). Hold `site.lock` for the whole tool call: the constructor keeps **one UI state per session** (current section, list page), so tool calls must not interleave. Run the sync api code with `anyio.to_thread.run_sync` so the event loop keeps answering pings.
 - On `ExplorerError` / `RuntimeError` from a half-done postback: `site.reset_explorer()` so the next call reloads explorer.aspx.
@@ -74,7 +75,7 @@ Design writes (`edu_design_*`) rebuild the fields the page's JS fills before a s
 
 ## Prompts and resources
 
-- **Prompts** are the skills' scenarios for MCP clients: each `.claude/skills/<name>/SKILL.md` (CLI commands, for agents in this repo) has a `mcp.md` beside it with the same steps in tool calls. Prompt name = skill name with `_` (`edu_publish_news`), description from the skill, optional argument `request` (the user's ask). `tests/test_mcp.py` checks that every skill has one and that it names only existing tools and prompts – change both files together.
+- **Prompts** are the skills' scenarios for MCP clients: each `.agents/skills/<name>/SKILL.md` (CLI commands, for agents in this repo) has a `mcp.md` beside it with the same steps in tool calls. Prompt name = skill name with `_` (`edu_publish_news`), description from the skill, optional argument `request` (the user's ask). `tests/test_mcp.py` checks that every skill has one and that it names only existing tools and prompts – change both files together.
 - **Resources**: `knowledge/**/*.md` as `edu://knowledge/<path>` (e.g. `edu://knowledge/endpoints/dialogs.md`).
 
 ## Tests
