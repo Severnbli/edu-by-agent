@@ -59,7 +59,7 @@ cp .env.example .env        # сайт, логин, пароль, способ �
 - Документы (PDF, DOCX) сайт не хранит: на сайт ставится ссылка на файл.
 - Если работаете через Claude Code, всё, что агент читает с сайта, уходит в API Anthropic.
 
-Факты о конструкторе: [`knowledge/`](knowledge/README.md). Правила для агента: [`CLAUDE.md`](CLAUDE.md). План работ: [`TASKS.md`](TASKS.md).
+Факты о конструкторе: [`knowledge/`](knowledge/README.md). Правила для агента: [`AGENTS.md`](AGENTS.md). План работ: [`TASKS.md`](TASKS.md).
 
 ## Лицензия
 

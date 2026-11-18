@@ -1,6 +1,6 @@
 # Tasks
 
-Backlog for future sessions. Pick the top open task, keep work on `dev`, commit after each step, then update this file (tick the task, add what you learned to `knowledge/`). Read `CLAUDE.md` and `knowledge/README.md` first.
+Backlog for future sessions. Pick the top open task, keep work on `dev`, commit after each step, then update this file (tick the task, add what you learned to `knowledge/`). Read `AGENTS.md` and `knowledge/README.md` first.
 
 Before any task that talks to the site: `./edu proxy up` (direct mode; `EDU_INTERFACE` must name the uplink that is up – `wlo1` on Wi-Fi, `eno1` on cable), then `./edu session check`. If the session is expired, ask the user to run `./edu session login` (site, login and password are prefilled from `.env`; they only solve the captcha). You can also start it yourself in the background and wait for it to finish.
 
@@ -47,7 +47,7 @@ Planned writes in `api/` (`changes.Change`: plan reads only, returns before/afte
 
 ## 5a. Site design refresh
 
-The plan and status of one school's redesign are site data and live in the git-ignored `.session/notes/` (see CLAUDE.md «Site data»). Constructor-side work:
+The plan and status of one school's redesign are site data and live in the git-ignored `.session/notes/` (see AGENTS.md «Site data»). Constructor-side work:
 - [x] design tools: `edu design list|show|set|copy|add|delete|export`, `edu cache clear`, MCP `edu_design_*`, skill `edu-design` (2026-11-11)
 - [x] a template save keeps its sections (`ClassifierL`), module «Язык» boxes, module checkboxes (2026-11-11)
 - [x] module section lists (`ASD_ClassifierList`, …): `edu design set --list NAME=ID,ID` / MCP `lists` (2026-11-13)

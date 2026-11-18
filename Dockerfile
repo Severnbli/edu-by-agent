@@ -18,7 +18,7 @@ RUN set -eux; \
     sslocal --version
 
 WORKDIR /app
-COPY pyproject.toml CLAUDE.md ./
+COPY pyproject.toml README.md ./
 COPY src ./src
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN pip3 install --no-cache-dir -e . "playwright==1.49.1" pytest ruff

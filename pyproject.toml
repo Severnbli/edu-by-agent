@@ -2,7 +2,7 @@
 name = "edu-by"
 version = "0.1.0"
 description = "Utilities and agent skills for operating the edu.by site constructor"
-readme = "CLAUDE.md"
+readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.10"
 dependencies = [
