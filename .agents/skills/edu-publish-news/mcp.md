@@ -13,6 +13,7 @@ Date, headline, annotation (propose one from the text if none is given, and let 
 1. `edu_session_status`. If it isn't valid, the user logs in (`./edu session login`, captcha).
 2. Find the news section. Usually «Архив новостей» (e.g. `1001/1431/1031`); if `.session/notes/site.md` names it, use that, else use `edu_tree` (depth 2) or ask. Call `edu_objects(section, pages=1)` and `edu_object(<a recent news id>)` to copy the site's HTML style.
 3. Photos, created before the news so the news comes out above them:
+   - For a requested collage, call `edu_photo_combine(paths, output)` with the input paths in display order and a new JPEG path inside the repo, then use that output as one photo.
    - `edu_object_create(section, type_id="304", count=N)` → preview → after the OK, again with `confirm_token` → `result.ids`.
    - for each: `edu_object_upload_image(id, path)` (`shrink` is on by default) → preview → confirm.
    - leave them unpublished.

@@ -71,6 +71,24 @@ def _proxy_error(s: Settings, e: Exception) -> None:
     _fail(f"Connection failed via {mask_proxy(s.effective_proxy)}: {e}.{hint}")
 
 
+@app.command("photo-combine")
+def photo_combine(
+    photos: Annotated[
+        list[Path], typer.Argument(help="Two or more image files, in display order.")
+    ],
+    output: Annotated[Path, typer.Option("--output", "-o", help="New JPEG file to create.")],
+    columns: Annotated[int, typer.Option(help="Maximum photos per row.", min=1, max=10)] = 2,
+) -> None:
+    """Combine local photos into one JPEG for a post or cover."""
+    from edu_by.photos import combine_photos
+
+    try:
+        result = combine_photos(photos, output, columns)
+    except (ValueError, OSError) as e:
+        _fail(str(e))
+    typer.echo(json.dumps(result, ensure_ascii=False))
+
+
 # ---------- session ----------
 
 

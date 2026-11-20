@@ -21,7 +21,7 @@ class ObjectError(RuntimeError):
 class ObjectData:
     id: str
     type: str  # full type name, e.g. "Блок html (текст раздела)"
-    name: str  # title / block description (ctl00$Main$name)
+    name: str  # title / block description (ctl00$Main$name or a record's zag)
     published: bool  # "Разрешить публикацию" (allow publication) checkbox
     section_id: str  # ctl00$Main$Classifier
     section_path: str  # label next to it, e.g. "Главная страница/О школе/"
@@ -60,7 +60,9 @@ class _LangLabels(HTMLParser):
 
 def parse_object_editor(object_id: str, page_html: str) -> ObjectData:
     f = parse_form(page_html)
-    if "ctl00$Main$text" not in f and "ctl00$Main$name" not in f:
+    record_fields = {"ctl00$Main$zag", "ctl00$Main$ano", "ctl00$Main$txt"}
+    is_record = record_fields.issubset(f)
+    if not is_record and "ctl00$Main$text" not in f and "ctl00$Main$name" not in f:
         raise ObjectError(f"object {object_id}: editor form not found (wrong id or no access?)")
     m = re.search(r"Тип:</td>\s*<td>\s*<b>(.*?)</b>", page_html, re.S)
     obj_type = strip_tags(m.group(1)) if m else ""
@@ -72,15 +74,15 @@ def parse_object_editor(object_id: str, page_html: str) -> ObjectData:
     return ObjectData(
         id=object_id,
         type=obj_type,
-        name=f.get("ctl00$Main$name", ""),
+        name=f.get("ctl00$Main$zag" if is_record else "ctl00$Main$name", ""),
         published="ctl00$Main$CheckBoxStatusObject" in f,
         section_id=f.get("ctl00$Main$Classifier", ""),
         section_path=section_path,
         tags=f.get("ctl00$Main$Tags", ""),
         languages=[langs.labels[i].strip() for i in sorted(langs.checked) if i in langs.labels],
         public_url=m.group(1) if m else None,
-        text=f.get("ctl00$Main$text", "").strip("\r\n"),
-        dop=f.get("ctl00$Main$dop", "").strip("\r\n"),
+        text=f.get("ctl00$Main$txt" if is_record else "ctl00$Main$text", "").strip("\r\n"),
+        dop=f.get("ctl00$Main$txt2" if is_record else "ctl00$Main$dop", "").strip("\r\n"),
     )
 
 

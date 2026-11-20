@@ -40,7 +40,12 @@ Read tools (annotations `readOnlyHint: true`):
 | `edu_design_list(category)` | `design.list_category` | templates, modules, CSS, JS, strings of a RengerProvider category |
 | `edu_design_item(kind, id, full=false)` | `design.read_item` | fields `edu_design_update` takes; template master and attached CSS / JS |
 
-Write tools – one per planned write, all with the same contract:
+Local photo preparation: `edu_photo_combine(paths, output, columns=2)` assembles the
+input files in order into a single JPEG, with no constructor session required.
+Inputs and the new output file must be inside the repository. Upload the output
+using `edu_object_upload_image` with its default `shrink=true`.
+
+Constructor write tools – one per planned write, all with the same contract:
 
 | Tool | Plan function | Level |
 |---|---|---|

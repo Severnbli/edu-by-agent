@@ -180,6 +180,20 @@ def test_parse_object_editor_unpublished():
     assert parse_object_editor("1063", html).published is False
 
 
+def test_parse_record_editor_without_name_or_text_fields():
+    html = (
+        EDITOR.replace("Блок html (текст раздела)", "Запись")
+        .replace("ctl00$Main$name", "ctl00$Main$zag")
+        .replace("ctl00$Main$text", "ctl00$Main$txt")
+        .replace("ctl00$Main$dop", "ctl00$Main$txt2")
+        .replace("</form>", '<textarea name="ctl00$Main$ano">Краткое описание</textarea></form>')
+    )
+    obj = parse_object_editor("1063", html)
+    assert obj.type == "Запись"
+    assert obj.name == "основной" and obj.text == "<p>Добро пожаловать</p>"
+    assert obj.published is True
+
+
 def test_treecache_roundtrip_and_stale_path(tmp_path):
     from edu_by.api import treecache
     from edu_by.api.explorer import ExplorerError, Section

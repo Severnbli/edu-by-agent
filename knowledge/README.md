@@ -21,6 +21,7 @@ Facts about the edu.by site constructor, taken from real traffic only. Each file
 | publish-2026-11-10 | 2026-11-10 | add section, add HTML block, publish it, unpublish it |
 | design-2026-11-10 | 2026-11-10 | create / copy / delete / save a style set and a script, save a module and a template |
 | design2-2026-11-11 | 2026-11-11 | copy and delete templates and a module (`TemplateCopy`, `TemplateDel`, `ControlCopy`, `ControlDel`), save a module copy, save master 1004 unchanged |
+| [record-editor-2026-11-20](captures/record-editor-2026-11-20.sanitized.json) | 2026-11-20 | editor field names for type 674 «Запись» |
 
 Raw and sanitized captures live in `.session/har/` (git-ignored). Excerpts copied into `captures/` must come from the sanitized file.
 

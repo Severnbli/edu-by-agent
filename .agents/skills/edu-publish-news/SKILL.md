@@ -28,7 +28,10 @@ Everything goes through `./edu` from the repo root. Write commands only preview 
    ./edu objects 1001/1431/1031 --pages 1
    ./edu object show <id of a recent news>      # dt_text, zag, name, txt – copy its HTML style
    ```
-3. Photos, one image object each. Create them before the news, so the news comes out above its photos in the list:
+3. Photos, one image object each. When asked for a collage, first run
+   `./edu photo-combine .session/work/photo1.jpg .session/work/photo2.jpg -o .session/work/collage.jpg`
+   and use the resulting JPEG as a single photo. The output path must be new.
+   Create image objects before the news, so the news comes out above its photos in the list:
    ```bash
    ./edu object add 1001/1431/1031 --type 304 --count 3 --yes      # → "ids": [...]
    ./edu object upload <image id> .session/work/photo1.jpg --shrink --yes
