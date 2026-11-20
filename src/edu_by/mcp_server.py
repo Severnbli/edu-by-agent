@@ -38,7 +38,7 @@ DEFAULT_LIST_PAGES = 3
 INSTRUCTIONS = """\
 Tools for the edu.by site constructor of one school website (a live public site).
 
-- Every write tool works in two steps. Called without `confirm_token` it changes nothing
+- Every constructor write tool works in two steps. Called without `confirm_token` it changes nothing
   and returns a preview: what changes (before/after), its level and a `token`. Show the
   preview to the user and ask. Only after their OK call the same tool with the same
   arguments and `confirm_token` = that token. Level `publish` is visible on the public site
@@ -153,11 +153,16 @@ def _plan_or_apply(change, confirm_token: str | None) -> dict:
     return {"plan": preview, "result": result}
 
 
-def _inside_repo(path: str) -> Path:
+def _repo_path(path: str) -> Path:
     p = Path(path)
     p = (REPO / p).resolve() if not p.is_absolute() else p.resolve()
     if not p.is_relative_to(REPO):
         raise ToolError(f"{path}: files must be inside the repository ({REPO})")
+    return p
+
+
+def _inside_repo(path: str) -> Path:
+    p = _repo_path(path)
     if not p.is_file():
         raise ToolError(f"{path}: no such file")
     return p
@@ -196,6 +201,29 @@ def build_server(runtime: Runtime | None = None) -> FastMCP:
 
     def tool(name: str, title: str, annotations: ToolAnnotations, description: str):
         return mcp.tool(name=name, title=title, annotations=annotations, description=description)
+
+    @tool(
+        "edu_photo_combine",
+        "Combine local photos",
+        ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False),
+        "Combine two or more local photos, in order, into a new JPEG. Inputs and output "
+        "must be inside the repository. Creates the file without contacting the site.",
+    )
+    async def edu_photo_combine(paths: list[str], output: str, columns: int = 2) -> dict:
+        from edu_by.photos import combine_photos
+
+        def combine() -> dict:
+            target = Path(output)
+            return combine_photos(
+                [_inside_repo(path) for path in paths],
+                _repo_path(str(target.parent)) / target.name,
+                columns,
+            )
+
+        try:
+            return await anyio.to_thread.run_sync(combine)
+        except (ValueError, OSError) as e:
+            raise ToolError(str(e)) from e
 
     # ----- reads -----
 

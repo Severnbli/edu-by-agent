@@ -6,6 +6,7 @@ import re
 
 import anyio
 from mcp.shared.memory import create_connected_server_and_client_session
+from PIL import Image
 from test_write import BASE, FakeEditor, fake_site
 
 from edu_by import mcp_server as ms
@@ -44,6 +45,7 @@ WRITES = {
     "edu_design_delete",
     "edu_cache_clear",
 }
+LOCAL_TOOLS = {"edu_photo_combine"}
 
 
 def runtime(factory) -> ms.Runtime:
@@ -73,7 +75,7 @@ def test_tools_and_annotations():
             return (await client.list_tools()).tools
 
     tools = {t.name: t for t in anyio.run(go)}
-    assert set(tools) == READS | WRITES
+    assert set(tools) == READS | WRITES | LOCAL_TOOLS
     for name in READS:
         assert tools[name].annotations.readOnlyHint is True
     for name in WRITES:
@@ -84,6 +86,30 @@ def test_tools_and_annotations():
             in {"edu_object_trash", "edu_section_delete", "edu_trash_purge", "edu_design_delete"}
         )
         assert "confirm_token" in tools[name].inputSchema["properties"]
+    assert tools["edu_photo_combine"].annotations.openWorldHint is False
+
+
+def test_photo_combine_creates_one_jpeg_without_session(tmp_path, monkeypatch):
+    monkeypatch.setattr(ms, "REPO", tmp_path)
+    Image.new("RGB", (120, 240), "red").save(tmp_path / "portrait.jpg")
+    Image.new("RGBA", (240, 120), (0, 0, 255, 0)).save(tmp_path / "landscape.png")
+    server = ms.build_server(runtime(lambda: None))
+    args = {"paths": ["portrait.jpg", "landscape.png"], "output": "combined.jpg"}
+
+    (tmp_path / "combined.jpg").write_bytes(b"existing")
+    assert call(server, "edu_photo_combine", args).isError
+    assert (tmp_path / "combined.jpg").read_bytes() == b"existing"
+    (tmp_path / "combined.jpg").unlink()
+
+    result = data(call(server, "edu_photo_combine", args))
+    with Image.open(result["path"]) as collage:
+        assert collage.format == "JPEG" and collage.width == 1600
+        assert collage.getpixel((100, 100))[0] > 250
+        assert min(collage.getpixel((1500, 100))) > 250
+        assert result["bytes"] == (tmp_path / "combined.jpg").stat().st_size
+
+    outside = call(server, "edu_photo_combine", {**args, "output": "../outside.jpg"})
+    assert outside.isError and "inside the repository" in outside.content[0].text
 
 
 def test_update_previews_then_applies_with_the_token():
@@ -135,7 +161,7 @@ def test_every_skill_has_an_mcp_scenario_naming_real_tools():
     skills = sorted(p.parent.name for p in ms.SKILLS.glob("*/SKILL.md"))
     prompts = {name: text for name, _, text in ms.skill_prompts()}
     assert sorted(n.replace("_", "-") for n in prompts) == skills
-    known = READS | WRITES | set(prompts)
+    known = READS | WRITES | LOCAL_TOOLS | set(prompts)
     for name, text in prompts.items():
         used = set(re.findall(r"\bedu_[a-z_]+\b", text))
         assert used <= known, (name, used - known)

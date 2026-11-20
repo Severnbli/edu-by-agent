@@ -59,6 +59,7 @@ Everything runs in **Docker** – no local venv or Python install. `./edu` wraps
 ./edu tree | objects SEC | types # reads; `edu object show ID`, `edu section show SEC`, `edu trash list TYPE`
 ./edu object set ID --set name=… # writes preview by default; --yes applies, delete level needs --token
 ./edu object upload ID FILE --shrink   # image ≤ 300 KB (re-encoded as JPEG if bigger)
+./edu photo-combine FIRST SECOND -o COLLAGE.jpg  # local JPEG, --columns 2 by default
 ./edu section add PARENT --title …   (also object add|copy|move|sort|upload|trash, section set|move|delete, trash restore|purge)
 ./edu design list CAT | show KIND ID   # design reads; KIND = template|control|css|js|string
 ./edu design set|copy|add|delete …     # design writes (site-wide!), on «Редизайн …» copies; `edu cache clear`

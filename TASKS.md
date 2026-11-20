@@ -64,6 +64,8 @@ The plan and status of one school's redesign are site data and live in the git-i
 
 ## Done
 
+- [x] Local photo collage via `edu photo-combine` and MCP `edu_photo_combine`; type 674 record editor support
+
 - [x] Codex primary: shared skills in `.agents/skills/`, project MCP registration, and compatibility links for Claude Code
 
 - [x] Repo setup, Docker runtime, `./edu` wrapper, proxy modes (direct over `wlo1`, Shadowsocks), proxy only for edu.by

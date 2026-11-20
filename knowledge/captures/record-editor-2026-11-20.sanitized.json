@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-20",
+  "request": {
+    "method": "GET",
+    "path": "/G_Data/ObjectEditor.aspx",
+    "query": {"guid": "1063"}
+  },
+  "response": {
+    "status": 200,
+    "observed_editor_fields": [
+      "ctl00$Main$HiddenTitleObject",
+      "ctl00$Main$IsClearCache",
+      "ctl00$Main$ListLang$0",
+      "ctl00$Main$CheckBoxStatusObject",
+      "ctl00$Main$Classifier",
+      "ctl00$Main$Tags",
+      "ctl00$Main$dt_text",
+      "ctl00$Main$zag",
+      "ctl00$Main$ano",
+      "ctl00$Main$txt",
+      "ctl00$Main$txt2"
+    ]
+  },
+  "sanitization": "Field names only. Object ID replaced. Hosts, headers, cookies and field values omitted."
+}
